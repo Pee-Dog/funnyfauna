@@ -17,11 +17,12 @@ loom {
     customMinecraftMetadata.set("https://downloads.betterthanadventure.net/bta-client/${libs.versions.btaChannel.get()}/v${libs.versions.bta.get()}/manifest.json")
 }
 repositories {
-    mavenCentral()
+	flatDir {
+		dirs("libs") // Points to your local libs folder
+	}
+	mavenCentral()
 	maven("https://jitpack.io")
     maven("https://maven.fabricmc.net/") { name = "Fabric" }
-    maven("https://maven.thesignalumproject.net/infrastructure") { name = "SignalumMavenInfrastructure" }
-    maven("https://maven.thesignalumproject.net/releases") { name = "SignalumMavenReleases" }
     ivy("https://github.com/Better-than-Adventure") {
         patternLayout { artifact("[organisation]/releases/download/v[revision]/[module].jar") }
         metadataSources { artifact() }
@@ -44,11 +45,13 @@ lwjgl {
 	implementation(Preset.MINIMAL_OPENGL)
 }
 dependencies {
-    minecraft("::${libs.versions.bta.get()}")
+	minecraft("::${libs.versions.bta.get()}") // only 1 Minecraft dependency
+
+	implementation(files("libs/halplibe-5.3.3.jar"))
+	implementation(files("libs/modmenu-bta-4.0.0.jar"))
 
 	runtimeOnly(libs.clientJar)
 	implementation(libs.loader)
-	// If you do not need Halplibe you can comment out or delete this line.
 	implementation(libs.halplibe)
 	implementation(libs.modMenu)
 	implementation(libs.legacyLwjgl)
@@ -60,10 +63,10 @@ dependencies {
 	implementation(libs.log4j.api)
 	implementation(libs.log4j.api12)
 	implementation(libs.gson)
-
 	implementation(libs.commonsLang3)
 	include(libs.commonsLang3)
 }
+
 java {
 	toolchain {
 		languageVersion = javaVersion.map { JavaLanguageVersion.of(it) }
