@@ -1,0 +1,10 @@
+{
+  "model_paths": [
+    "/assets/funnyfauna/models/entity/ModelHorse.json"
+  ],
+  "renderers": {
+    "funnyfauna:horse": {
+      "main": "geometry.horse"
+    }
+  }
+}

@@ -1,9 +1,9 @@
-package peedog.funnyfauna.entity.penguin;
+package peedog.funnyfauna.client.render.entity;
 
 import net.minecraft.client.render.entity.MobRenderer;
 import net.minecraft.client.render.model.ModelBase;
-import net.minecraft.core.entity.animal.MobChicken;
 import net.minecraft.core.util.helper.MathHelper;
+import peedog.funnyfauna.entity.penguin.MobPenguin;
 
 public class MobRendererPenguin extends MobRenderer<MobPenguin> {
 	public MobRendererPenguin(ModelBase modelbase, float f) {

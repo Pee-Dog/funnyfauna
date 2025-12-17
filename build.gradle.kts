@@ -49,6 +49,11 @@ dependencies {
 
 	implementation(files("libs/halplibe-5.3.3.jar"))
 	implementation(files("libs/modmenu-bta-4.0.0.jar"))
+	implementation(files("libs/modmenu-bta-4.0.0.jar"))
+	compileOnly(files("libs/dragonfly-1.7.0-alpha.7-7.3_04.jar"))
+	runtimeOnly(files("libs/dragonfly-1.7.0-alpha.7-7.3_04.jar"))
+
+
 
 	runtimeOnly(libs.clientJar)
 	implementation(libs.loader)

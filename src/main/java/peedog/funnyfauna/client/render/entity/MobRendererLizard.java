@@ -1,8 +1,9 @@
-package peedog.funnyfauna.entity.lizard;
+package peedog.funnyfauna.client.render.entity;
 
 import net.minecraft.client.render.entity.MobRenderer;
 import net.minecraft.client.render.model.ModelBase;
 import net.minecraft.client.render.tessellator.Tessellator;
+import peedog.funnyfauna.entity.lizard.MobLizard;
 
 public class MobRendererLizard extends MobRenderer<MobLizard> {
 

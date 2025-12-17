@@ -1,7 +1,8 @@
-package peedog.funnyfauna.entity.lizard;
+package peedog.funnyfauna.client.render.entity;
 
 import net.minecraft.client.render.model.Cube;
 import net.minecraft.client.render.model.ModelBase;
+import peedog.funnyfauna.entity.lizard.MobLizard;
 
 public class ModelLizard extends ModelBase {
 	public MobLizard entity;

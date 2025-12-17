@@ -3,6 +3,7 @@ package peedog.funnyfauna;
 import net.minecraft.core.util.collection.NamespaceID;
 import peedog.funnyfauna.entity.camel.MobCamel;
 import peedog.funnyfauna.entity.emu.MobEmu;
+import peedog.funnyfauna.entity.horse.MobHorse;
 import peedog.funnyfauna.entity.lizard.MobLizard;
 import peedog.funnyfauna.entity.penguin.MobPenguin;
 import turniplabs.halplibe.helper.EntityHelper;
@@ -29,6 +30,8 @@ public class FunnyFaunaEntities {
 		EntityHelper.createEntity(MobLizard.class, NamespaceID.getPermanent(MOD_ID, "lizard"), entityKey("lizard"));
 		EntityHelper.createEntity(MobEmu.class, NamespaceID.getPermanent(MOD_ID, "emu"), entityKey("emu"));
 		EntityHelper.createEntity(MobCamel.class, NamespaceID.getPermanent(MOD_ID, "camel"), entityKey("camel"));
+		EntityHelper.createEntity(MobHorse.class, NamespaceID.getPermanent(MOD_ID, "horse"), entityKey("horse"));
+
 
 
 

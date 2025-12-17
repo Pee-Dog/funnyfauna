@@ -1,9 +1,8 @@
-package peedog.funnyfauna.entity.emu;
+package peedog.funnyfauna.client.render.entity;
 
 import net.minecraft.client.render.entity.MobRenderer;
 import net.minecraft.client.render.model.ModelBase;
-import net.minecraft.core.entity.animal.MobChicken;
-import net.minecraft.core.util.helper.MathHelper;
+import peedog.funnyfauna.entity.emu.MobEmu;
 
 public class MobRendererEmu extends MobRenderer<MobEmu> {
 	public MobRendererEmu(ModelBase modelbase, float f) {
