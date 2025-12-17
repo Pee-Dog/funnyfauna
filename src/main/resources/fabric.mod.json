@@ -1,11 +1,11 @@
 {
 	"schemaVersion": 1,
-	"id": "examplemod",
+	"id": "funnyfauna",
 	"version": "${version}",
-	"name": "Example Mod",
-	"description": "This mod aims to help new BTA modders.",
+	"name": "Funny Fauna",
+	"description": "Adds some funny fauna.",
 	"authors": [
-		"Turnip Labs"
+		"Pee Dog"
 	],
 	"contact": {
 		"homepage": "",
@@ -16,20 +16,32 @@
 	"environment": "*",
 	"entrypoints": {
 		"main": [
-			"turniplabs.examplemod.ExampleMod"
+			"peedog.funnyfauna.FunnyFauna"
 		],
 		"beforeGameStart": [
-			"turniplabs.examplemod.ExampleMod"
+			"peedog.funnyfauna.FunnyFauna"
 		],
 		"afterGameStart": [
-			"turniplabs.examplemod.ExampleMod"
+			"peedog.funnyfauna.FunnyFauna"
 		],
 		"recipesReady": [
-			"turniplabs.examplemod.ExampleMod"
+			"peedog.funnyfauna.FunnyFauna"
+		],
+		"initModels": [
+			"peedog.funnyfauna.FunnyFaunaModels"
+		],
+		"client": [
+			"peedog.funnyfauna.FunnyFaunaClient"
+		],
+		"beforeClientStart": [
+			"peedog.funnyfauna.FunnyFaunaClient"
+		],
+		"afterClientStart": [
+			"peedog.funnyfauna.FunnyFaunaClient"
 		]
 	},
 	"mixins": [
-		"examplemod.mixins.json"
+		"funnyfauna.mixins.json"
 	],
 	"depends": {
 		"fabricloader": ">=${fabricloader}",

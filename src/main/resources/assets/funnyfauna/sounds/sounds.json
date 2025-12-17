@@ -1,0 +1,79 @@
+{
+  "mob.penguin.idle": {
+    "subtitle": "subtitles.mob.penguin.idle",
+    "sounds": [
+      "mob/penguin/idle1.ogg",
+      "mob/penguin/idle2.ogg",
+      "mob/penguin/idle3.ogg"
+    ]
+  },
+  "mob.penguin.hurt": {
+    "subtitle": "subtitles.mob.penguin.hurt",
+    "sounds": [
+      "mob/penguin/hurt1.ogg",
+      "mob/penguin/hurt2.ogg"
+    ]
+  },
+  "mob.penguin.death": {
+    "subtitle": "subtitles.mob.penguin.death",
+    "sounds": [
+      "mob/penguin/death.ogg"
+    ]
+  },
+  "mob.camel.idle": {
+    "subtitle": "subtitles.mob.camel.idle",
+    "sounds": [
+      "mob/camel/idle1.ogg",
+      "mob/camel/idle2.ogg",
+      "mob/camel/idle3.ogg"
+    ]
+  },
+  "mob.camel.hurt": {
+    "subtitle": "subtitles.mob.camel.hurt",
+    "sounds": [
+      "mob/camel/hurt1.ogg",
+      "mob/camel/hurt2.ogg"
+    ]
+  },
+  "mob.camel.death": {
+    "subtitle": "subtitles.mob.camel.death",
+    "sounds": [
+      "mob/camel/hurt1.ogg",
+      "mob/camel/hurt2.ogg"
+    ]
+  },
+  "mob.lizard.idle": {
+    "subtitle": "subtitles.mob.lizard.idle",
+    "sounds": [
+      "mob/lizard/idle1.ogg",
+      "mob/lizard/idle2.ogg",
+      "mob/lizard/idle3.ogg",
+      "mob/lizard/idle4.ogg"
+    ]
+  },
+  "mob.lizard.hurt": {
+    "subtitle": "subtitles.mob.lizard.hurt",
+    "sounds": [
+      "mob/lizard/hurt1.ogg",
+      "mob/lizard/hurt2.ogg",
+      "mob/lizard/hurt3.ogg"
+    ]
+  },
+  "mob.lizard.death": {
+    "subtitle": "subtitles.mob.lizard.death",
+    "sounds": [
+      "mob/lizard/hurt1.ogg",
+      "mob/lizard/hurt2.ogg",
+      "mob/lizard/hurt3.ogg"
+    ]
+  },
+  "mob.emu.idle": {
+    "subtitle": "subtitles.mob.emu.idle",
+    "sounds": [
+      "mob/emu/idle1.ogg",
+      "mob/emu/idle2.ogg",
+      "mob/emu/idle3.ogg",
+      "mob/emu/idle4.ogg"
+    ]
+  }
+}
