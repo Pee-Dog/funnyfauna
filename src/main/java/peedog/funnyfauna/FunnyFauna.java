@@ -16,6 +16,7 @@ import peedog.funnyfauna.entity.camel.MobCamel;
 import peedog.funnyfauna.entity.emu.MobEmu;
 import peedog.funnyfauna.entity.lizard.MobLizard;
 import peedog.funnyfauna.entity.penguin.MobPenguin;
+import peedog.funnyfauna.item.FunnyFaunaItems;
 import turniplabs.halplibe.util.GameStartEntrypoint;
 import turniplabs.halplibe.util.RecipeEntrypoint;
 
@@ -34,6 +35,7 @@ public class FunnyFauna implements ModInitializer, RecipeEntrypoint, GameStartEn
 
 	@Override
 	public void onInitialize() {
+		new FunnyFaunaItems().initializeItems();
 		removeVanillaPassives(Biomes.OVERWORLD_TUNDRA);
 		Biomes.OVERWORLD_TUNDRA.getSpawnableList(MobCategory.creature).add(new SpawnListEntry(MobPenguin.class, 10));
 		removeVanillaPassives(Biomes.OVERWORLD_GLACIER);

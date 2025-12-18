@@ -75,5 +75,26 @@
       "mob/emu/idle3.ogg",
       "mob/emu/idle4.ogg"
     ]
+  },
+  "mob.horse.idle": {
+    "subtitle": "subtitles.mob.horse.idle",
+    "sounds": [
+      "mob/horse/idle1.ogg",
+      "mob/horse/idle2.ogg",
+      "mob/horse/idle3.ogg"
+    ]
+  },
+  "mob.horse.hurt": {
+    "subtitle": "subtitles.mob.horse.hurt",
+    "sounds": [
+      "mob/horse/hurt1.ogg",
+      "mob/horse/hurt2.ogg"
+    ]
+  },
+  "mob.horse.death": {
+    "subtitle": "subtitles.mob.horse.death",
+    "sounds": [
+      "mob/horse/death.ogg"
+    ]
   }
 }

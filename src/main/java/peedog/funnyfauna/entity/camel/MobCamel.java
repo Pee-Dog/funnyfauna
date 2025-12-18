@@ -1,15 +1,20 @@
 package peedog.funnyfauna.entity.camel;
 
+import net.minecraft.core.WeightedRandomLootObject;
 import net.minecraft.core.block.Block;
 import net.minecraft.core.block.Blocks;
 import net.minecraft.core.entity.Entity;
 import net.minecraft.core.entity.animal.MobAnimal;
+import net.minecraft.core.item.ItemStack;
 import net.minecraft.core.item.Items;
 import net.minecraft.core.util.collection.NamespaceID;
 import net.minecraft.core.util.helper.MathHelper;
 import net.minecraft.core.world.World;
+import peedog.funnyfauna.item.FunnyFaunaItems;
 
 import java.util.Random;
+
+import static java.lang.Math.random;
 
 public class MobCamel extends MobAnimal {
 
@@ -17,6 +22,8 @@ public class MobCamel extends MobAnimal {
 		super(world);
 		this.textureIdentifier = NamespaceID.getPermanent("funnyfauna", "camel");
 		this.setSize(1F, 1.8F);
+		this.mobDrops.add(new WeightedRandomLootObject(FunnyFaunaItems.COARSEHIDE.getDefaultStack(), 1, 5));
+
 	}
 	@Override
 	public boolean canSpawnHere() {
@@ -50,5 +57,6 @@ public class MobCamel extends MobAnimal {
 		return "funnyfauna:mob.camel.death";
 
 	}
+
 
 }

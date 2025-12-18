@@ -2,6 +2,7 @@ package peedog.funnyfauna.entity.horse;
 
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
+import net.minecraft.core.util.helper.MathHelper;
 import org.jspecify.annotations.NonNull;
 import org.jspecify.annotations.Nullable;
 import org.useless.dragonfly.models.entity.BoneTransform;
@@ -24,6 +25,13 @@ public class MobRendererHorse extends MobRenderer<MobHorse> {
 		}
 
 		model.resetBones();
+		float limbSwing = this.getLimbSwing(entity, partialTick);
+		float limbYaw = this.getLimbYaw(entity, partialTick);
+		float limbPitch = this.getLimbPitch(entity, partialTick);
+		float bodyYaw = this.getBodyYaw(entity, partialTick);
+		float headYaw = this.getHeadYaw(entity, partialTick) - bodyYaw;
+		float headPitch = this.getHeadPitch(entity, partialTick);
+
 		BoneTransform head = model.getTransform("head");
 		BoneTransform neck = model.getTransform("neck");
 		BoneTransform legFrontLeft = model.getTransform("legFrontLeft");
@@ -31,6 +39,14 @@ public class MobRendererHorse extends MobRenderer<MobHorse> {
 		BoneTransform legBackLeft = model.getTransform("legBackLeft");
 		BoneTransform legBackRight = model.getTransform("legBackRight");
 		BoneTransform tail = model.getTransform("tail");
+
+		head.rotX = headPitch;
+		head.rotY = headYaw;
+		neck.rotY = headYaw;
+		legFrontLeft.rotX = legBackRight.rotX = MathHelper.cos(limbSwing * 0.6662F) * 1.4F * limbYaw;
+		legFrontRight.rotX = legBackLeft.rotX = MathHelper.cos(limbSwing * 0.6662F + 3.141593F) * 1.4F * limbYaw;
+		tail.rotX = -0.90F;
+		tail.rotY = MathHelper.cos(limbSwing * 0.6662F) * 0.5F * -0.55F;
 
 		return model;
 	}

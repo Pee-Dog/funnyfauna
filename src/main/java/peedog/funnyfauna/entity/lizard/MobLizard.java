@@ -11,6 +11,7 @@ import net.minecraft.core.util.helper.DamageType;
 import net.minecraft.core.util.helper.MathHelper;
 import net.minecraft.core.world.World;
 import org.jetbrains.annotations.NotNull;
+import peedog.funnyfauna.item.FunnyFaunaItems;
 
 public class MobLizard extends MobAnimal {
 
@@ -43,6 +44,7 @@ public class MobLizard extends MobAnimal {
 		// Lose tail the first time it gets hurt
 		if (result && this.hasTail) {
 			this.hasTail = false;
+			this.dropItem(FunnyFaunaItems.FOOD_LIZARDTAIL.id, 1);
 		}
 
 		return result;

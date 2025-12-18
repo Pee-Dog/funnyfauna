@@ -13,10 +13,11 @@ import net.minecraft.core.item.Items;
 import net.minecraft.core.util.collection.NamespaceID;
 import net.minecraft.core.util.helper.DamageType;
 import net.minecraft.core.world.World;
+import peedog.funnyfauna.entity.MobFunnyRideable;
 
 import java.util.Objects;
 
-public class MobHorse extends MobAnimal {
+public class MobHorse extends MobFunnyRideable {
 	boolean isTamed;
 	int annoyance = 0;
 	int chanceForTame = 0;
@@ -27,6 +28,7 @@ public class MobHorse extends MobAnimal {
 		super(world);
 		this.textureIdentifier = NamespaceID.getPermanent("funnyfauna", "horse");
 		this.setSize(1F, 1.8F);
+		this.rideFootSize = 1.5f;
 	}
 	@Override
 	public int getMaxHealth() {
@@ -34,43 +36,61 @@ public class MobHorse extends MobAnimal {
 	}
 	@Override
 	public boolean interact(Player player) {
-		super.interact(player);
-		ItemStack item = player.inventory.getCurrentItem();
+		ItemStack item = player.getHeldItem();
 		if (item != null) {
 			if (!isTamed) {
 				if (item.itemID == Items.WHEAT.id) {
 					chanceForTame += 1;
-					item.consumeItem(player);
-					//world.playSoundAtEntity(null, this, "creatures.eating", 1.0f, (random.nextFloat() - random.nextFloat()) * 0.2F + 1.0F);
+					if (player.getGamemode().consumeBlocks()) {
+						player.swingItem();
+						player.getHeldItem().stackSize--;
+					}
+
+						//world.playSoundAtEntity(null, this, "creatures.eating", 1.0f, (random.nextFloat() - random.nextFloat()) * 0.2F + 1.0F);
 				}
 				if (item.itemID == Items.FOOD_APPLE.id) {
-					chanceForTame += random.nextInt(4) + 1;
-					item.consumeItem(player);
+					chanceForTame += random.nextInt(5) + 1;
+					if (player.getGamemode().consumeBlocks()) {
+						player.swingItem();
+						player.getHeldItem().stackSize--;
+					}
 					//world.playSoundAtEntity(null, this, "creatures.eating", 1.0f, (random.nextFloat() - random.nextFloat()) * 0.2F + 1.0F);
 
 				}
 				if (item.itemID == Items.DUST_SUGAR.id) {
 					chanceForTame += random.nextInt(8) + 1;
-					item.consumeItem(player);
+					if (player.getGamemode().consumeBlocks()) {
+						player.swingItem();
+						player.getHeldItem().stackSize--;
+					}
 					//world.playSoundAtEntity(null, this, "creatures.eating", 1.0f, (random.nextFloat() - random.nextFloat()) * 0.2F + 1.0F);
 				}
 			}
 
-			if (isTamed && Objects.equals(player.username, ownerName)) {
+			if (isTamed) {
 				if (item.itemID == Items.SADDLE.id) {
 					isSaddled = true;
-					item.consumeItem(player);
+					if (player.getGamemode().consumeBlocks()) {
+						player.swingItem();
+						player.getHeldItem().stackSize--;
+					}
 				}
 
 				if (getHealth() < getMaxHealth()) {
 					if (item.itemID == Items.WHEAT.id) {
 						heal(2);
-						item.consumeItem(player);
+						if (player.getGamemode().consumeBlocks()) {
+							player.swingItem();
+							player.getHeldItem().stackSize--;
+						}
 						//world.playSoundAtEntity(null, this, "creatures.eating", 1.0f, (random.nextFloat() - random.nextFloat()) * 0.2F + 1.0F);
 					}
 					if (item.itemID == Items.FOOD_APPLE.id) {
 						heal(4);
-						item.consumeItem(player);
+						if (player.getGamemode().consumeBlocks()) {
+							player.swingItem();
+							player.getHeldItem().stackSize--;
+						}
 						//world.playSoundAtEntity(null, this, "creatures.eating", 1.0f, (random.nextFloat() - random.nextFloat()) * 0.2F + 1.0F);
 					}
 				}
@@ -78,85 +98,65 @@ public class MobHorse extends MobAnimal {
 		} else {
 			player.startRiding(this);
 		}
-		return false;
+		return super.interact(player);
 	}
 	public boolean getSaddled() {
 		return this.isSaddled;
 	}
 	@Override
-	protected void updateAI() {
-		super.updateAI();
-		if (passenger != null && !isTamed) {
-			Player player = (Player) passenger;
+	public void updateAI() {
 
-			if (random.nextInt(6) == 0) {
-				annoyance += 20;
-			}
-			if (random.nextInt(10) == 0) {
-				tameCounter += 20 * chanceForTame;
-			}
+		if (passenger == null) {
+			super.updateAI();
+			return;
+		}
 
-			if (annoyance >= 300) {
-				annoyance = 0;
-				player.yd += 0.75F;
-				player.xd -= yRot * 0.0015F;
-				ejectRider();
-				world.playSoundAtEntity(null,
-					this,
-					"creatures.horsemad",
-					getSoundVolume(),
-					(random.nextFloat() - random.nextFloat()) * 0.2F + 1.0F);
-			}
+		if (isSaddled) {
+			this.yRotO = this.yRot = passenger.yRot;
+			this.xRotO = this.xRot = passenger.xRot;
+			return;
+		}
 
-			if (tameCounter++ >= 1000) {
-				isTamed = true;
-				ownerName = ((Player) passenger).username;
+		Player player = (Player) passenger;
 
-				for (int i = 0; i < 8; i++) {
-					double randX = x + random.nextDouble();
-					double randY = y + random.nextDouble();
-					double randZ = z + random.nextDouble();
+		if (random.nextInt(6) == 0) {
+			annoyance += 20;
+		}
 
-					world.spawnParticle("heart", randX, randY + 0.22, randZ, 0.0, 0.2, 0.0, 0);
-				}
+		if (random.nextInt(10) == 0) {
+			tameCounter += 20 * chanceForTame;
+		}
+
+		if (annoyance >= 300) {
+			annoyance = 0;
+			player.yd += 0.75F;
+			player.xd -= yRot * 0.0015F;
+			ejectRider();
+
+			world.playSoundAtEntity(
+				null,
+				this,
+				"funnyfauna:mob.horse.angry",
+				getSoundVolume(),
+				(random.nextFloat() - random.nextFloat()) * 0.2F + 1.0F
+			);
+		}
+
+		if (tameCounter++ >= 1000) {
+			isTamed = true;
+			ownerName = player.username;
+
+			for (int i = 0; i < 8; i++) {
+				world.spawnParticle(
+					"heart",
+					x + random.nextDouble(),
+					y + random.nextDouble() + 0.22,
+					z + random.nextDouble(),
+					0.0, 0.2, 0.0, 0
+				);
 			}
 		}
 	}
-
-	@Override
-	public void moveEntityWithHeading(float moveStrafing, float moveForward) {
-		if (passenger != null) {
-
-			if (isSaddled) {
-				// Match rider rotation
-				yRot = passenger.yRot;
-				yRotO = yRot;
-
-				// Override AI movement with rider input
-				this.moveStrafing = moveStrafing;
-				this.moveForward = moveForward;
-
-				// Jump inference (beta-style)
-				if (onGround && passenger.yd > 0.0F && !noPhysics) {
-					yd = 0.42F;
-				}
-
-				if (!onGround) {
-					super.moveRelative(this.moveStrafing, this.moveForward, moveSpeed / 16.0F);
-				} else {
-					super.moveRelative(this.moveStrafing, this.moveForward, moveSpeed / 6.0F);
-				}
-
-				super.moveEntityWithHeading(this.moveStrafing, this.moveForward);
-				return;
-			}
-		}
-
-		super.moveEntityWithHeading(moveStrafing, moveForward);
-	}
-
-
-
 
 
 	@Override
@@ -176,17 +176,17 @@ public class MobHorse extends MobAnimal {
 
 	@Override
 	public String getLivingSound() {
-		return "creatures.horsegrunt";
+		return "funnyfauna:mob.horse.idle";
 	}
 
 	@Override
 	protected String getHurtSound() {
-		return "creatures.horsehurt";
+		return "funnyfauna:mob.horse.hurt";
 	}
 
 	@Override
 	protected String getDeathSound() {
-		return "creatures.horsedying";
+		return "funnyfauna:mob.horse.death";
 	}
 
 	@Override
@@ -239,6 +239,13 @@ public class MobHorse extends MobAnimal {
 		}
 		return super.hurt(attacker, damage, type);
 	}
+
+	@Override
+	protected boolean canBeControlled() {
+		return isSaddled;
+	}
+
+
 
 
 }
