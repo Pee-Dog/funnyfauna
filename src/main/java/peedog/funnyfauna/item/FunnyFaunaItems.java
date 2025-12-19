@@ -13,6 +13,8 @@ public class FunnyFaunaItems {
 	public static Item FOOD_LIZARDTAIL;
 	public static Item COARSEHIDE;
 	public static Item SATCHEL;
+	public static Item BIRDFOOT;
+
 
 	public void initializeItems() {
 		// Items
@@ -22,5 +24,7 @@ public class FunnyFaunaItems {
 			.build(new Item("coarsehide", "funnyfauna:item/coarsehide", itemID++));
 		SATCHEL = new ItemBuilder(MOD_ID)
 			.build(new ItemSatchel("satchel", "funnyfauna:item/satchel", itemID++));
+		BIRDFOOT = new ItemBuilder(MOD_ID)
+			.build(new Item("birdfoot", "funnyfauna:item/birdfoot", itemID++));
 	}
 }

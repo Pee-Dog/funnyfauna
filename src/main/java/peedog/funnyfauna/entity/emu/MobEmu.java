@@ -1,5 +1,6 @@
 package peedog.funnyfauna.entity.emu;
 
+import net.minecraft.core.WeightedRandomLootObject;
 import net.minecraft.core.block.Block;
 import net.minecraft.core.block.Blocks;
 import net.minecraft.core.entity.Entity;
@@ -8,6 +9,7 @@ import net.minecraft.core.item.Items;
 import net.minecraft.core.util.collection.NamespaceID;
 import net.minecraft.core.util.helper.MathHelper;
 import net.minecraft.core.world.World;
+import peedog.funnyfauna.item.FunnyFaunaItems;
 
 import java.util.Random;
 
@@ -19,6 +21,7 @@ public class MobEmu extends MobAnimal {
 		this.textureIdentifier = NamespaceID.getPermanent("funnyfauna", "emu");
 		this.setSize(0.3F, 1.8F);
 		this.eggTimer = this.random.nextInt(6000) + 6000;
+		this.mobDrops.add(new WeightedRandomLootObject(FunnyFaunaItems.BIRDFOOT.getDefaultStack(), 1, 2));
 	}
 	@Override
 	public boolean canSpawnHere() {
@@ -55,10 +58,14 @@ public class MobEmu extends MobAnimal {
 
 	public void onLivingUpdate() {
 		super.onLivingUpdate();
+		int blockX = MathHelper.floor(this.x);
+		int blockY = MathHelper.floor(this.y);
+		int blockZ = MathHelper.floor(this.z);
 		if (!this.world.isClientSide && --this.eggTimer <= 0) {
 			this.world.playSoundAtEntity((Entity)null, this, "mob.chickenplop", 1.0F, (this.random.nextFloat() - this.random.nextFloat()) * 0.2F + 1.0F);
 			this.dropItem(Items.EGG_CHICKEN.id, 1);
 			this.eggTimer = this.random.nextInt(6000) + 6000;
+			this.world.setBlockWithNotify(blockX, blockY, blockZ, Blocks.DIRT.id());
 		}
 
 	}

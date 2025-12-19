@@ -27,6 +27,7 @@ public class FunnyFaunaModels implements ModelEntrypoint {
 	public void initItemModels(ItemModelDispatcher dispatcher) {
 		dispatcher.addDispatch(new ItemModelStandard(FunnyFaunaItems.FOOD_LIZARDTAIL, null).setIcon("funnyfauna:item/food_lizardtail"));
 		dispatcher.addDispatch(new ItemModelStandard(FunnyFaunaItems.COARSEHIDE, null).setIcon("funnyfauna:item/coarsehide"));
+		dispatcher.addDispatch(new ItemModelStandard(FunnyFaunaItems.BIRDFOOT, null).setIcon("funnyfauna:item/birdfoot"));
 	}
 
 	@Override
