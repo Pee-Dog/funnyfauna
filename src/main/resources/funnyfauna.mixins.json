@@ -7,7 +7,16 @@
   },
   "mixins": [
     "accessors.EntityAccessor",
+    "player.PlayerMixin",
+    "player.PlayerControllerMixin"
+  ],
+  "client": [
+    "PacketHandlerClientMixin",
+    "player.PlayerLocalMixin",
     "player.PlayerLocalHandleFunnyRideableMixin"
   ],
-  "client": []
+  "server": [
+    "PacketHandlerServerMixin",
+    "player.PlayerServerMixin"
+  ]
 }

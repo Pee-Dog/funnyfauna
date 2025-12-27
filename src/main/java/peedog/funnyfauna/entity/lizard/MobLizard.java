@@ -21,6 +21,10 @@ public class MobLizard extends MobAnimal {
 		this.setSize(1F, 0.5F);
 	}
 	@Override
+	public int getMaxHealth() {
+		return 4;
+	}
+	@Override
 	public boolean canSpawnHere() {
 		int x = MathHelper.floor(this.x);
 		int y = MathHelper.floor(this.bb.minY);

@@ -4,15 +4,28 @@ import net.minecraft.client.render.EntityRenderDispatcher;
 import net.minecraft.client.render.TileEntityRenderDispatcher;
 import net.minecraft.client.render.block.color.BlockColorDispatcher;
 import net.minecraft.client.render.block.model.BlockModelDispatcher;
+import net.minecraft.client.render.block.model.BlockModelStandard;
 import net.minecraft.client.render.item.model.ItemModelDispatcher;
 import net.minecraft.client.render.item.model.ItemModelStandard;
+import net.minecraft.client.render.texture.stitcher.IconCoordinate;
+import net.minecraft.client.render.texture.stitcher.TextureRegistry;
+import net.minecraft.core.entity.Entity;
+import net.minecraft.core.item.ItemStack;
+import org.useless.dragonfly.renderer.MobRenderer;
+import peedog.funnyfauna.block.FunnyFaunaBlocks;
+import peedog.funnyfauna.block.entity.TileEntityEmuEgg;
 import peedog.funnyfauna.client.render.entity.*;
+import peedog.funnyfauna.client.render.tileentity.TileRendererEmuEgg;
+import peedog.funnyfauna.entity.ant.EntityAnt;
+import peedog.funnyfauna.entity.armadillo.MobArmadillo;
 import peedog.funnyfauna.entity.camel.MobCamel;
+import peedog.funnyfauna.entity.cricket.EntityCricket;
 import peedog.funnyfauna.entity.emu.MobEmu;
 import peedog.funnyfauna.entity.horse.MobHorse;
-import peedog.funnyfauna.entity.horse.MobRendererHorse;
+import peedog.funnyfauna.client.render.entity.MobRendererHorse;
 import peedog.funnyfauna.entity.lizard.MobLizard;
 import peedog.funnyfauna.entity.penguin.MobPenguin;
+import peedog.funnyfauna.entity.projectile.ProjectileBigEgg;
 import peedog.funnyfauna.item.FunnyFaunaItems;
 import turniplabs.halplibe.helper.ModelHelper;
 import turniplabs.halplibe.util.ModelEntrypoint;
@@ -20,7 +33,7 @@ import turniplabs.halplibe.util.ModelEntrypoint;
 public class FunnyFaunaModels implements ModelEntrypoint {
 	@Override
 	public void initBlockModels(BlockModelDispatcher blockModelDispatcher) {
-
+		ModelHelper.setBlockModel(FunnyFaunaBlocks.ANT_HILL, () -> new BlockModelStandard<>(FunnyFaunaBlocks.ANT_HILL).setAllTextures(0, "minecraft:block/sand"));
 	}
 
 	@Override
@@ -28,6 +41,24 @@ public class FunnyFaunaModels implements ModelEntrypoint {
 		dispatcher.addDispatch(new ItemModelStandard(FunnyFaunaItems.FOOD_LIZARDTAIL, null).setIcon("funnyfauna:item/food_lizardtail"));
 		dispatcher.addDispatch(new ItemModelStandard(FunnyFaunaItems.COARSEHIDE, null).setIcon("funnyfauna:item/coarsehide"));
 		dispatcher.addDispatch(new ItemModelStandard(FunnyFaunaItems.BIRDFOOT, null).setIcon("funnyfauna:item/birdfoot"));
+		dispatcher.addDispatch(new ItemModelStandard(FunnyFaunaItems.POCKET, null).setIcon("funnyfauna:item/pocket"));
+		dispatcher.addDispatch(new ItemModelStandard(FunnyFaunaItems.OIL, null).setIcon("funnyfauna:item/oil"));
+		dispatcher.addDispatch(new ItemModelStandard(FunnyFaunaItems.FOOD_BLUBBER, null).setIcon("funnyfauna:item/food_blubber"));
+		dispatcher.addDispatch(new ItemModelStandard(FunnyFaunaItems.EGG_EMU, null).setIcon("funnyfauna:item/egg_emu"));
+		dispatcher.addDispatch(new ItemModelStandard(FunnyFaunaItems.ARM_EXTENSION, null) {
+		private final IconCoordinate OFF =
+			TextureRegistry.getTexture("funnyfauna:item/arm_extension_off");
+
+		private final IconCoordinate ON =
+			TextureRegistry.getTexture("funnyfauna:item/arm_extension_on");
+
+			@Override
+			public IconCoordinate getIcon(Entity entity, ItemStack stack) {
+				return stack.getMetadata() == 1 ? ON : OFF;
+			}
+		});
+
+
 	}
 
 	@Override
@@ -35,13 +66,19 @@ public class FunnyFaunaModels implements ModelEntrypoint {
 		ModelHelper.setEntityModel(MobPenguin.class, () -> new MobRendererPenguin(new ModelPenguin(), 0.6F));
 		ModelHelper.setEntityModel(MobLizard.class, () -> new MobRendererLizard(new ModelLizard(), 0.6F));
 		ModelHelper.setEntityModel(MobEmu.class, () -> new MobRendererEmu(new ModelEmu(), 0.6F));
-		ModelHelper.setEntityModel(MobCamel.class, () -> new MobRendererCamel(new ModelCamel(), 0.6F));
+		ModelHelper.setEntityModel(MobCamel.class, MobRendererCamel::new);
 		ModelHelper.setEntityModel(MobHorse.class, MobRendererHorse::new);
+		ModelHelper.setEntityModel(MobArmadillo.class, MobRendererArmadillo::new);
+		ModelHelper.setEntityModel(ProjectileBigEgg.class, EntityRendererBigEgg::new);
+		ModelHelper.setEntityModel(EntityAnt.class, EntityRendererAnt::new);
+		ModelHelper.setEntityModel(EntityCricket.class, EntityRendererCricket::new);
+
 
 	}
 
 	@Override
 	public void initTileEntityModels(TileEntityRenderDispatcher tileEntityRenderDispatcher) {
+		ModelHelper.setTileEntityModel(TileEntityEmuEgg.class, TileRendererEmuEgg::new);
 
 	}
 

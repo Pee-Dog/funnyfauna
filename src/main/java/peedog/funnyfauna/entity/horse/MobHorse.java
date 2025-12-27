@@ -10,6 +10,7 @@ import net.minecraft.core.entity.player.Player;
 import net.minecraft.core.item.Item;
 import net.minecraft.core.item.ItemStack;
 import net.minecraft.core.item.Items;
+import net.minecraft.core.item.tag.ItemTags;
 import net.minecraft.core.util.collection.NamespaceID;
 import net.minecraft.core.util.helper.DamageType;
 import net.minecraft.core.world.World;
@@ -105,61 +106,47 @@ public class MobHorse extends MobFunnyRideable {
 	}
 	@Override
 	public void updateAI() {
+		super.updateAI();
 
-		if (passenger == null) {
-			super.updateAI();
-			return;
-		}
+		if (passenger != null && !isTamed) {
+			Player player = (Player) passenger;
 
-		if (isSaddled) {
-			this.yRotO = this.yRot = passenger.yRot;
-			this.xRotO = this.xRot = passenger.xRot;
-			return;
-		}
+			if (random.nextInt(6) == 0) {
+				annoyance += 20;
+			}
+			if (random.nextInt(10) == 0) {
+				tameCounter += 20 * chanceForTame;
+			}
 
-		Player player = (Player) passenger;
+			if (annoyance >= 300) {
+				annoyance = 0;
+				player.yd += 0.75F;
+				player.xd -= yRot * 0.0015F;
+				ejectRider();
+				world.playSoundAtEntity(null,
+					this,
+					"funnyfauna:mob.horse.angry",
+					getSoundVolume(),
+					(random.nextFloat() - random.nextFloat()) * 0.2F + 1.0F);
+			}
 
-		if (random.nextInt(6) == 0) {
-			annoyance += 20;
-		}
+			if (tameCounter++ >= 1000) {
+				isTamed = true;
+				ownerName = ((Player) passenger).username;
 
-		if (random.nextInt(10) == 0) {
-			tameCounter += 20 * chanceForTame;
-		}
+				for (int i = 0; i < 8; i++) {
+					double randX = x + random.nextDouble();
+					double randY = y + random.nextDouble();
+					double randZ = z + random.nextDouble();
 
-		if (annoyance >= 300) {
-			annoyance = 0;
-			player.yd += 0.75F;
-			player.xd -= yRot * 0.0015F;
-			ejectRider();
-
-			world.playSoundAtEntity(
-				null,
-				this,
-				"funnyfauna:mob.horse.angry",
-				getSoundVolume(),
-				(random.nextFloat() - random.nextFloat()) * 0.2F + 1.0F
-			);
-		}
-
-		if (tameCounter++ >= 1000) {
-			isTamed = true;
-			ownerName = player.username;
-
-			for (int i = 0; i < 8; i++) {
-				world.spawnParticle(
-					"heart",
-					x + random.nextDouble(),
-					y + random.nextDouble() + 0.22,
-					z + random.nextDouble(),
-					0.0, 0.2, 0.0, 0
-				);
+					world.spawnParticle("heart", randX, randY + 0.22, randZ, 0.0, 0.2, 0.0, 0);
+				}
 			}
 		}
 	}
 
 
-	@Override
+		@Override
 	public float getYRotDelta(){
 		return 0;
 	}
@@ -243,6 +230,10 @@ public class MobHorse extends MobFunnyRideable {
 	@Override
 	protected boolean canBeControlled() {
 		return isSaddled;
+	}
+
+	public boolean isFavouriteItem(ItemStack itemStack) {
+		return itemStack != null && itemStack.getItem().hasTag(ItemTags.COWS_FAVOURITE_ITEM);
 	}
 
 

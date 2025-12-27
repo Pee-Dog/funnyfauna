@@ -1,0 +1,95 @@
+package peedog.funnyfauna.gui;
+
+import net.minecraft.client.Minecraft;
+import net.minecraft.core.InventoryAction;
+import net.minecraft.core.entity.player.Player;
+import net.minecraft.core.item.ItemStack;
+import net.minecraft.core.player.inventory.container.ContainerInventory;
+import net.minecraft.core.player.inventory.menu.MenuAbstract;
+import net.minecraft.core.player.inventory.slot.Slot;
+import peedog.funnyfauna.FunnyFaunaClient;
+
+import java.util.List;
+
+public class ContainerSatchel extends MenuAbstract {
+	public InventorySatchel inventorySatchel;
+
+	public ContainerSatchel(final ContainerInventory playerInv, final ItemStack satchel) {
+		super();
+		this.inventorySatchel = new InventorySatchel(satchel);
+		final int slotsNum = this.inventorySatchel.getContainerSize();
+		final int rows = (int) Math.ceil(slotsNum / 9d);
+		for (int i = 0; i < rows; ++i) {
+			int width = 9;
+			if (i == rows - 1) {
+				width = slotsNum - 9 * i;
+			}
+			for (int k = 0; k < width; ++k) {
+				this.addSlot(new SlotSatchel(this.inventorySatchel, k + i * 9, 8 + k * 18, 18 + 18 * i));
+			}
+		}
+		for (int i = 0; i < 3; ++i) {
+			for (int k = 0; k < 9; ++k) {
+				this.addSlot(new Slot(playerInv, k + i * 9 + 9, 8 + k * 18, 84 + i * 18));
+			}
+		}
+		for (int j = 0; j < 9; ++j) {
+			this.addSlot(new Slot(playerInv, j, 8 + j * 18, 142));
+		}
+	}
+	@Override
+	public List<Integer> getMoveSlots(final InventoryAction inventoryAction, final Slot slot, final int i, final Player entityPlayer) {
+		final int chestSize = this.inventorySatchel.getContainerSize();
+		if (slot.index >= 0 && slot.index < chestSize) {
+			return this.getSlots(0, chestSize, false);
+		}
+		if (inventoryAction == InventoryAction.MOVE_ALL) {
+			if (slot.index >= chestSize && slot.index < chestSize + 27) {
+				return this.getSlots(chestSize, 27, false);
+			}
+			if (slot.index >= chestSize + 27 && slot.index < chestSize + 36) {
+				return this.getSlots(chestSize + 27, 9, false);
+			}
+		} else if (slot.index >= chestSize && slot.index < chestSize + 36) {
+			return this.getSlots(chestSize, 36, false);
+		}
+		return null;
+	}
+	@Override
+	public List<Integer> getTargetSlots(final InventoryAction inventoryAction, final Slot slot, final int i, final Player entityPlayer) {
+		final int chestSize = this.inventorySatchel.getContainerSize();
+		if (slot.index < chestSize) {
+			return this.getSlots(chestSize, 36, true);
+		}
+		return this.getSlots(0, chestSize, false);
+	}
+
+	@Override
+	public boolean stillValid(final Player entityPlayer) {
+		return this.inventorySatchel.stillValid(entityPlayer);
+	}
+
+	@Override
+	public ItemStack clicked(final InventoryAction action, final int[] args, final Player player) {
+		int slotId = this.inventorySatchel.getContainerSize() + player.inventory.getCurrentItemIndex() - 9;
+		if (player.inventory.getCurrentItemIndex() < 9) slotId = this.inventorySatchel.getContainerSize() + player.inventory.getCurrentItemIndex() + (9 * 3);
+		assert player.world != null;
+		if (args != null && args.length >= 1 && args[0] == slotId) {
+			if (player.world.isClientSide) {
+				Minecraft.getMinecraft().thePlayer.closeScreen();
+			}
+			return player.getHeldItem();
+		}
+		final ItemStack is = super.clicked(action, args, player);
+		if (player.world.isClientSide) {
+			this.inventorySatchel.setChanged();
+			FunnyFaunaClient.sendStackUpdate(this.inventorySatchel.stack.getData());
+			if (player.getHeldItem() == null) {
+				Minecraft.getMinecraft().thePlayer.closeScreen();
+				return is;
+			}
+			player.getHeldItem().setData(this.inventorySatchel.stack.getData());
+		}
+		return is;
+	}
+}

@@ -1,4 +1,4 @@
-package peedog.funnyfauna.entity.horse;
+package peedog.funnyfauna.client.render.entity;
 
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
@@ -8,6 +8,7 @@ import org.jspecify.annotations.Nullable;
 import org.useless.dragonfly.models.entity.BoneTransform;
 import org.useless.dragonfly.models.entity.StaticEntityModel;
 import org.useless.dragonfly.renderer.MobRenderer;
+import peedog.funnyfauna.entity.horse.MobHorse;
 
 @Environment(EnvType.CLIENT)
 public class MobRendererHorse extends MobRenderer<MobHorse> {
@@ -41,6 +42,7 @@ public class MobRendererHorse extends MobRenderer<MobHorse> {
 		BoneTransform tail = model.getTransform("tail");
 
 		head.rotX = headPitch;
+		neck.rotX = headPitch;
 		head.rotY = headYaw;
 		neck.rotY = headYaw;
 		legFrontLeft.rotX = legBackRight.rotX = MathHelper.cos(limbSwing * 0.6662F) * 1.4F * limbYaw;

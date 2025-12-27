@@ -25,7 +25,7 @@
 			"peedog.funnyfauna.FunnyFauna"
 		],
 		"recipesReady": [
-			"peedog.funnyfauna.FunnyFauna"
+			"peedog.funnyfauna.FunnyFaunaRecipes"
 		],
 		"initModels": [
 			"peedog.funnyfauna.FunnyFaunaModels"

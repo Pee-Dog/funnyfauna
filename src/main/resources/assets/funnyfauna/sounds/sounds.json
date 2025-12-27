@@ -96,5 +96,11 @@
     "sounds": [
       "mob/horse/death.ogg"
     ]
+  },
+  "mob.horse.angry": {
+    "subtitle": "subtitles.mob.horse.angry",
+    "sounds": [
+      "mob/horse/angry.ogg"
+    ]
   }
 }

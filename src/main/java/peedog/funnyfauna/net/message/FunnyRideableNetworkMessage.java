@@ -43,7 +43,7 @@ public class FunnyRideableNetworkMessage implements NetworkMessage {
 	}
 
 	@Override
-	public void handle(NetworkMessage.NetworkContext networkContext) {
+	public void handle(NetworkContext networkContext) {
 		if (EnvironmentHelper.isServerEnvironment()) {
 			Player player = networkContext.player;
 

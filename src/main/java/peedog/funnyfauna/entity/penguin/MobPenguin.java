@@ -1,13 +1,17 @@
 package peedog.funnyfauna.entity.penguin;
 
+import net.minecraft.core.WeightedRandomLootObject;
 import net.minecraft.core.block.Block;
 import net.minecraft.core.block.Blocks;
 import net.minecraft.core.entity.Entity;
 import net.minecraft.core.entity.animal.MobAnimal;
+import net.minecraft.core.item.ItemStack;
 import net.minecraft.core.item.Items;
+import net.minecraft.core.item.tag.ItemTags;
 import net.minecraft.core.util.collection.NamespaceID;
 import net.minecraft.core.util.helper.MathHelper;
 import net.minecraft.core.world.World;
+import peedog.funnyfauna.item.FunnyFaunaItems;
 
 import java.util.Random;
 
@@ -24,6 +28,11 @@ public class MobPenguin extends MobAnimal {
 		this.textureIdentifier = NamespaceID.getPermanent("funnyfauna", "penguin");
 		this.setSize(0.3F, 1.0F);
 		this.eggTimer = this.random.nextInt(6000) + 6000;
+		this.mobDrops.add(new WeightedRandomLootObject(FunnyFaunaItems.FOOD_BLUBBER.getDefaultStack(), 1, 2));
+	}
+	@Override
+	public int getMaxHealth() {
+		return 5;
 	}
 	@Override
 	public boolean canSpawnHere() {
@@ -71,11 +80,6 @@ public class MobPenguin extends MobAnimal {
 			this.flapping = 1.0F;
 		}
 
-		this.flapping = (float)((double)this.flapping * 0.9);
-		if (!this.onGround && this.yd < (double)0.0F) {
-			this.yd *= 0.6;
-		}
-
 		this.flap += this.flapping * 2.0F;
 		if (!this.world.isClientSide && --this.eggTimer <= 0) {
 			this.world.playSoundAtEntity((Entity)null, this, "mob.chickenplop", 1.0F, (this.random.nextFloat() - this.random.nextFloat()) * 0.2F + 1.0F);
@@ -84,6 +88,9 @@ public class MobPenguin extends MobAnimal {
 		}
 
 	}
-
+	public boolean isFavouriteItem(ItemStack itemStack) {
+		return itemStack != null && itemStack.getItem() == Items.FOOD_FISH_RAW;
+	}
+//maybe add penguinfavoriteitem that checks if they're taggged as fish
 
 }

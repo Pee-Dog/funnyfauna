@@ -1,10 +1,18 @@
 {
   "model_paths": [
-    "/assets/funnyfauna/models/entity/ModelHorse.json"
+    "/assets/funnyfauna/models/entity/horse.geo.json",
+    "/assets/funnyfauna/models/entity/camel.geo.json",
+    "/assets/funnyfauna/models/entity/armadillo.geo.json"
   ],
   "renderers": {
     "funnyfauna:horse": {
       "main": "geometry.horse"
+    },
+    "funnyfauna:camel": {
+      "main": "geometry.camel"
+    },
+    "funnyfauna:armadillo": {
+      "main": "geometry.armadillo"
     }
   }
 }
