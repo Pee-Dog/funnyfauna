@@ -2,6 +2,7 @@ package peedog.funnyfauna.block;
 
 import net.minecraft.core.block.Block;
 import net.minecraft.core.sound.BlockSounds;
+import peedog.funnyfauna.item.FunnyFaunaItems;
 import turniplabs.halplibe.helper.BlockBuilder;
 import turniplabs.halplibe.util.BlockInitEntrypoint;
 
@@ -13,6 +14,7 @@ public final class FunnyFaunaBlocks implements BlockInitEntrypoint {
 
 	public static Block<?> EGG_EMU_BLOCK;
 	public static Block<?> ANT_HILL;
+	public static Block<?> JAR_CRICKET;
 
 	public static void init() {
 		if (!hasInit) {
@@ -32,6 +34,20 @@ public final class FunnyFaunaBlocks implements BlockInitEntrypoint {
 			.setHardness(0.2f)
 			.setResistance(0.2f)
 			.build("ant.hill", "ant_hill", blockID++,BlockLogicAntHill::new);
+		JAR_CRICKET = new BlockBuilder(MOD_ID)
+			.setBlockSound(BlockSounds.GLASS)
+			.setHardness(0.1f)
+			.setResistance(0.1f)
+			.build(
+				"jar.cricket",
+				"jar_cricket",
+				blockID++,
+				block -> new BlockLogicJarCricket(
+					block,
+					() -> FunnyFaunaItems.JAR_CRICKET
+				)
+			);
+
 
 
 	}

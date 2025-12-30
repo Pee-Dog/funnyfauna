@@ -4,6 +4,7 @@ import net.minecraft.client.render.EntityRenderDispatcher;
 import net.minecraft.client.render.TileEntityRenderDispatcher;
 import net.minecraft.client.render.block.color.BlockColorDispatcher;
 import net.minecraft.client.render.block.model.BlockModelDispatcher;
+import net.minecraft.client.render.block.model.BlockModelJar;
 import net.minecraft.client.render.block.model.BlockModelStandard;
 import net.minecraft.client.render.item.model.ItemModelDispatcher;
 import net.minecraft.client.render.item.model.ItemModelStandard;
@@ -34,6 +35,7 @@ public class FunnyFaunaModels implements ModelEntrypoint {
 	@Override
 	public void initBlockModels(BlockModelDispatcher blockModelDispatcher) {
 		ModelHelper.setBlockModel(FunnyFaunaBlocks.ANT_HILL, () -> new BlockModelStandard<>(FunnyFaunaBlocks.ANT_HILL).setAllTextures(0, "minecraft:block/sand"));
+		ModelHelper.setBlockModel(FunnyFaunaBlocks.JAR_CRICKET, () -> new BlockModelJar<>(FunnyFaunaBlocks.JAR_CRICKET));
 	}
 
 	@Override
@@ -45,6 +47,7 @@ public class FunnyFaunaModels implements ModelEntrypoint {
 		dispatcher.addDispatch(new ItemModelStandard(FunnyFaunaItems.OIL, null).setIcon("funnyfauna:item/oil"));
 		dispatcher.addDispatch(new ItemModelStandard(FunnyFaunaItems.FOOD_BLUBBER, null).setIcon("funnyfauna:item/food_blubber"));
 		dispatcher.addDispatch(new ItemModelStandard(FunnyFaunaItems.EGG_EMU, null).setIcon("funnyfauna:item/egg_emu"));
+		dispatcher.addDispatch(new ItemModelStandard(FunnyFaunaItems.JAR_CRICKET, null).setIcon("funnyfauna:item/jar_cricket"));
 		dispatcher.addDispatch(new ItemModelStandard(FunnyFaunaItems.ARM_EXTENSION, null) {
 		private final IconCoordinate OFF =
 			TextureRegistry.getTexture("funnyfauna:item/arm_extension_off");

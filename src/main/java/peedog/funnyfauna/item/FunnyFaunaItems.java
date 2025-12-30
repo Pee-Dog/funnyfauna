@@ -1,7 +1,10 @@
 package peedog.funnyfauna.item;
 
+import net.minecraft.core.block.Blocks;
 import net.minecraft.core.item.Item;
 import net.minecraft.core.item.ItemFood;
+import peedog.funnyfauna.block.FunnyFaunaBlocks;
+import peedog.funnyfauna.entity.cricket.EntityCricket;
 import turniplabs.halplibe.helper.ItemBuilder;
 
 import static peedog.funnyfauna.FunnyFauna.MOD_ID;
@@ -18,6 +21,7 @@ public class FunnyFaunaItems {
 	public static Item FOOD_BLUBBER;
 	public static Item EGG_EMU;
 	public static Item ARM_EXTENSION;
+	public static Item JAR_CRICKET;
 
 
 
@@ -39,6 +43,8 @@ public class FunnyFaunaItems {
 			.build(new ItemBigEgg("egg_emu", "funnyfauna:item/egg_emu", itemID++));
 		ARM_EXTENSION = new ItemBuilder(MOD_ID)
 			.build(new ItemArmExtension("arm_extension", "funnyfauna:item/arm_extension", itemID++));
+		JAR_CRICKET = new ItemBuilder(MOD_ID)
+			.build(new ItemJarAnimal("jar_cricket", "funnyfauna:item/jar_cricket", itemID++, () -> FunnyFaunaBlocks.JAR_CRICKET, (world, player) -> new EntityCricket(world)));
 
 
 	}

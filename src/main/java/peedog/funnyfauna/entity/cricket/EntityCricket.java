@@ -2,8 +2,13 @@ package peedog.funnyfauna.entity.cricket;
 
 import com.mojang.nbt.tags.CompoundTag;
 import net.minecraft.core.entity.Entity;
+import net.minecraft.core.entity.player.Player;
+import net.minecraft.core.item.ItemBucketEmpty;
+import net.minecraft.core.item.ItemStack;
+import net.minecraft.core.item.Items;
 import net.minecraft.core.util.helper.MathHelper;
 import net.minecraft.core.world.World;
+import org.jetbrains.annotations.NotNull;
 
 public class EntityCricket extends Entity {
 
@@ -113,6 +118,16 @@ public class EntityCricket extends Entity {
 
 	public int getVariant() {
 		return variant;
+	}
+
+	public boolean interact(@NotNull Player player) {
+		ItemStack itemstack = player.inventory.getCurrentItem();
+		if (itemstack != null && itemstack.itemID == Items.JAR.id) {
+			ItemBucketEmpty.useBucket(player, new ItemStack(Items.BUCKET_MILK));
+			return true;
+		} else {
+			return super.interact(player);
+		}
 	}
 
 
