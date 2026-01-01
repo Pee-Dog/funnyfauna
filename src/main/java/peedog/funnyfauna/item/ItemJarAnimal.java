@@ -80,7 +80,7 @@ public class ItemJarAnimal extends ItemPlaceable {
 			player.swingItem();
 			player.getHeldItem().stackSize--;
 		}
-		world.playSoundAtEntity(player, player, "item.pickup", 1.0F, 1.0F);
+		world.playSoundAtEntity(player, player, "step.stone", 1.0F, 0.5F);
 		return true;
 	}
 }

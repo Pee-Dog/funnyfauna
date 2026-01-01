@@ -11,6 +11,7 @@ import net.minecraft.core.item.tag.ItemTags;
 import net.minecraft.core.util.collection.NamespaceID;
 import net.minecraft.core.util.helper.MathHelper;
 import net.minecraft.core.world.World;
+import peedog.funnyfauna.FunnyFauna;
 import peedog.funnyfauna.item.FunnyFaunaItems;
 
 import java.util.Random;
@@ -58,7 +59,7 @@ public class MobArmadillo extends MobAnimal {
 		super.onLivingUpdate();
 	}
 	public boolean isFavouriteItem(ItemStack itemStack) {
-		return itemStack != null && itemStack.getItem() == Items.FOOD_FISH_RAW;
+		return itemStack != null && itemStack.getItem() == FunnyFaunaItems.JAR_CRICKET;
 	}
 //maybe add penguinfavoriteitem that checks if they're taggged as fish
 

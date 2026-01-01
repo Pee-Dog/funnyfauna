@@ -13,6 +13,7 @@ import net.minecraft.client.render.texture.stitcher.TextureRegistry;
 import net.minecraft.client.sound.SoundRepository;
 import net.minecraft.core.net.packet.PacketCustomPayload;
 import peedog.funnyfauna.particle.ParticleBugs;
+import peedog.funnyfauna.particle.ParticleCricket;
 import turniplabs.halplibe.helper.TextureHelper;
 import turniplabs.halplibe.util.ClientStartEntrypoint;
 
@@ -29,14 +30,8 @@ public class FunnyFaunaClient implements ClientModInitializer, ClientStartEntryp
 		SoundRepository.registerNamespace(MOD_ID);
 		ParticleDispatcher dispatcher = ParticleDispatcher.getInstance();
 
-		dispatcher.addDispatch(
-			"bugs",
-			(world, x, y, z, xa, ya, za, data) -> {
-				float scale = 1.0F;        // or dynamic
-				// can pass type if you want variations
-				return new ParticleBugs(world, x, y, z, scale);
-			}
-		);
+		dispatcher.addDispatch("bugs", (world, x, y, z, xa, ya, za, data) -> {float scale = 1.0F; return new ParticleBugs(world, x, y, z, scale);});
+		dispatcher.addDispatch("cricket", (world, x, y, z, xa, ya, za, data) -> {float scale = 1.0F; return new ParticleCricket(world, x, y, z);});
 	}
 	@Override
 	public void afterClientStart() {

@@ -37,16 +37,9 @@ public final class FunnyFaunaBlocks implements BlockInitEntrypoint {
 		JAR_CRICKET = new BlockBuilder(MOD_ID)
 			.setBlockSound(BlockSounds.GLASS)
 			.setHardness(0.1f)
+			.setTicking(true)
 			.setResistance(0.1f)
-			.build(
-				"jar.cricket",
-				"jar_cricket",
-				blockID++,
-				block -> new BlockLogicJarCricket(
-					block,
-					() -> FunnyFaunaItems.JAR_CRICKET
-				)
-			);
+			.build("jar.cricket", "jar_cricket", blockID++, block -> new BlockLogicJarCricket(block, () -> FunnyFaunaItems.JAR_CRICKET));
 
 
 

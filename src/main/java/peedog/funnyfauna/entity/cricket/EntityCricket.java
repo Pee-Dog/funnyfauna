@@ -3,12 +3,14 @@ package peedog.funnyfauna.entity.cricket;
 import com.mojang.nbt.tags.CompoundTag;
 import net.minecraft.core.entity.Entity;
 import net.minecraft.core.entity.player.Player;
+import net.minecraft.core.item.Item;
 import net.minecraft.core.item.ItemBucketEmpty;
 import net.minecraft.core.item.ItemStack;
 import net.minecraft.core.item.Items;
 import net.minecraft.core.util.helper.MathHelper;
 import net.minecraft.core.world.World;
 import org.jetbrains.annotations.NotNull;
+import peedog.funnyfauna.item.FunnyFaunaItems;
 
 public class EntityCricket extends Entity {
 
@@ -120,15 +122,53 @@ public class EntityCricket extends Entity {
 		return variant;
 	}
 
+	public boolean isPickable() {return !this.removed;}
+
+	@Override
 	public boolean interact(@NotNull Player player) {
-		ItemStack itemstack = player.inventory.getCurrentItem();
-		if (itemstack != null && itemstack.itemID == Items.JAR.id) {
-			ItemBucketEmpty.useBucket(player, new ItemStack(Items.BUCKET_MILK));
+		System.out.println("[FunnyFauna] Cricket interact called");
+		ItemStack held = player.inventory.getCurrentItem();
+
+		// Only capture with empty jar
+		if (held != null && held.itemID == Items.JAR.id) {
+
+			// Server-side only
+			if (!player.world.isClientSide) {
+
+				// Remove ONE empty jar from the current slot
+				int slot = player.inventory.getCurrentItemIndex();
+				player.inventory.removeItem(slot, 1);
+
+				// Create cricket jar item
+				ItemStack cricketJar = new ItemStack(FunnyFaunaItems.JAR_CRICKET);
+
+				// Optional: store variant
+				CompoundTag tag = new CompoundTag();
+				tag.putInt("Variant", this.variant);
+				cricketJar.setData(tag);
+
+				// Try to insert into inventory
+				player.inventory.insertItem(cricketJar, true);
+
+				// If insertion failed (still has stack size), drop it
+				if (cricketJar.stackSize > 0) {
+					player.dropPlayerItemWithRandomChoice(cricketJar, false);
+				}
+
+				// Remove the cricket entity
+				this.remove();
+			}
+
 			return true;
-		} else {
-			return super.interact(player);
 		}
+
+		return super.interact(player);
 	}
+
+	protected boolean makeStepSound() {
+		return false;
+	}
+
 
 
 	/* ===================== Save ===================== */
@@ -145,4 +185,5 @@ public class EntityCricket extends Entity {
 		tag.putInt("HopCooldown", hopCooldown);
 		tag.putInt("Variant", variant);
 	}
+
 }

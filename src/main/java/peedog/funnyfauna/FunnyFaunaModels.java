@@ -13,6 +13,7 @@ import net.minecraft.client.render.texture.stitcher.TextureRegistry;
 import net.minecraft.core.entity.Entity;
 import net.minecraft.core.item.ItemStack;
 import org.useless.dragonfly.renderer.MobRenderer;
+import peedog.funnyfauna.block.BlockModelJarClosed;
 import peedog.funnyfauna.block.FunnyFaunaBlocks;
 import peedog.funnyfauna.block.entity.TileEntityEmuEgg;
 import peedog.funnyfauna.client.render.entity.*;
@@ -35,7 +36,7 @@ public class FunnyFaunaModels implements ModelEntrypoint {
 	@Override
 	public void initBlockModels(BlockModelDispatcher blockModelDispatcher) {
 		ModelHelper.setBlockModel(FunnyFaunaBlocks.ANT_HILL, () -> new BlockModelStandard<>(FunnyFaunaBlocks.ANT_HILL).setAllTextures(0, "minecraft:block/sand"));
-		ModelHelper.setBlockModel(FunnyFaunaBlocks.JAR_CRICKET, () -> new BlockModelJar<>(FunnyFaunaBlocks.JAR_CRICKET));
+		ModelHelper.setBlockModel(FunnyFaunaBlocks.JAR_CRICKET, () -> new BlockModelJarClosed(FunnyFaunaBlocks.JAR_CRICKET));
 	}
 
 	@Override
