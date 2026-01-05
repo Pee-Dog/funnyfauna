@@ -20,6 +20,7 @@ import peedog.funnyfauna.client.render.entity.*;
 import peedog.funnyfauna.client.render.tileentity.TileRendererEmuEgg;
 import peedog.funnyfauna.entity.ant.EntityAnt;
 import peedog.funnyfauna.entity.armadillo.MobArmadillo;
+import peedog.funnyfauna.entity.boar.MobBoar;
 import peedog.funnyfauna.entity.camel.MobCamel;
 import peedog.funnyfauna.entity.cricket.EntityCricket;
 import peedog.funnyfauna.entity.emu.MobEmu;
@@ -73,6 +74,7 @@ public class FunnyFaunaModels implements ModelEntrypoint {
 		ModelHelper.setEntityModel(MobCamel.class, MobRendererCamel::new);
 		ModelHelper.setEntityModel(MobHorse.class, MobRendererHorse::new);
 		ModelHelper.setEntityModel(MobArmadillo.class, MobRendererArmadillo::new);
+		ModelHelper.setEntityModel(MobBoar.class, MobRendererBoar::new);
 		ModelHelper.setEntityModel(ProjectileBigEgg.class, EntityRendererBigEgg::new);
 		ModelHelper.setEntityModel(EntityAnt.class, EntityRendererAnt::new);
 		ModelHelper.setEntityModel(EntityCricket.class, EntityRendererCricket::new);

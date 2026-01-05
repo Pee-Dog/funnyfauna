@@ -1,0 +1,61 @@
+{
+	"format_version": "1.12.0",
+	"minecraft:geometry": [
+		{
+			"description": {
+				"identifier": "geometry.boar",
+				"texture_width": 64,
+				"texture_height": 32,
+				"visible_bounds_width": 2,
+				"visible_bounds_height": 2.5,
+				"visible_bounds_offset": [0, 0.75, 0]
+			},
+			"bones": [
+				{
+					"name": "body",
+					"pivot": [0, 13, 2],
+					"rotation": [90, 0, 0],
+					"cubes": [
+						{"origin": [-4, 7, -5], "size": [8, 16, 10], "uv": [27, 6]}
+					]
+				},
+				{
+					"name": "head",
+					"pivot": [0, 11, -8],
+					"cubes": [
+						{"origin": [-4, 7, -16], "size": [8, 8, 8], "uv": [0, 0]},
+						{"origin": [-3, 7, -18], "size": [6, 4, 2], "uv": [-1, 26]}
+					]
+				},
+				{
+					"name": "leg1",
+					"pivot": [-2, 6, 7],
+					"cubes": [
+						{"origin": [-4, 0, 5], "size": [3, 6, 3], "uv": [1, 17]}
+					]
+				},
+				{
+					"name": "leg2",
+					"pivot": [2.5, 6, 6.5],
+					"cubes": [
+						{"origin": [1, 0, 5], "size": [3, 6, 3], "uv": [1, 17]}
+					]
+				},
+				{
+					"name": "leg3",
+					"pivot": [-2.5, 6, -6.5],
+					"cubes": [
+						{"origin": [-4, 0, -8], "size": [3, 6, 3], "uv": [1, 17]}
+					]
+				},
+				{
+					"name": "leg4",
+					"pivot": [2.5, 6, -6.5],
+					"cubes": [
+						{"origin": [1, 0, -8], "size": [3, 6, 3], "uv": [1, 17]}
+					]
+				}
+			]
+		}
+	]
+}
