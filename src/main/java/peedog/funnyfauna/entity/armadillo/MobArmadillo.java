@@ -61,6 +61,5 @@ public class MobArmadillo extends MobAnimal {
 	public boolean isFavouriteItem(ItemStack itemStack) {
 		return itemStack != null && itemStack.getItem() == FunnyFaunaItems.JAR_CRICKET;
 	}
-//maybe add penguinfavoriteitem that checks if they're taggged as fish
 
 }

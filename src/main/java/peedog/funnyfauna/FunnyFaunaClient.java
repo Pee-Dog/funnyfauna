@@ -12,6 +12,7 @@ import net.minecraft.client.render.texture.stitcher.AtlasStitcher;
 import net.minecraft.client.render.texture.stitcher.TextureRegistry;
 import net.minecraft.client.sound.SoundRepository;
 import net.minecraft.core.net.packet.PacketCustomPayload;
+import peedog.funnyfauna.particle.ParticleBugSquash;
 import peedog.funnyfauna.particle.ParticleBugs;
 import peedog.funnyfauna.particle.ParticleCricket;
 import turniplabs.halplibe.helper.TextureHelper;
@@ -32,6 +33,7 @@ public class FunnyFaunaClient implements ClientModInitializer, ClientStartEntryp
 
 		dispatcher.addDispatch("bugs", (world, x, y, z, xa, ya, za, data) -> {float scale = 1.0F; return new ParticleBugs(world, x, y, z, scale);});
 		dispatcher.addDispatch("cricket", (world, x, y, z, xa, ya, za, data) -> {float scale = 1.0F; return new ParticleCricket(world, x, y, z);});
+		dispatcher.addDispatch("bug_squash", (world, x, y, z, xa, ya, za, data) -> {float scale = 1.0F; return new ParticleBugSquash(world, x, y, z);});
 	}
 	@Override
 	public void afterClientStart() {

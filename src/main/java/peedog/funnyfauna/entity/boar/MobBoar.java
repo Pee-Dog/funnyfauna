@@ -17,6 +17,7 @@ import net.minecraft.core.util.helper.DamageType;
 import net.minecraft.core.util.helper.MathHelper;
 import net.minecraft.core.util.phys.AABB;
 import net.minecraft.core.world.World;
+import peedog.funnyfauna.item.FunnyFaunaItems;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -31,7 +32,8 @@ public class MobBoar extends MobAnimal {
 		super(world);
 		setSize(0.9F, 0.9F);
 		this.textureIdentifier = NamespaceID.getPermanent("funnyfauna", "boar");
-		mobDrops.add(new WeightedRandomLootObject(Items.FOOD_PORKCHOP_RAW.getDefaultStack(), 1, 2));
+		mobDrops.add(new WeightedRandomLootObject(Items.FOOD_PORKCHOP_RAW.getDefaultStack(), 0, 2));
+		mobDrops.add(new WeightedRandomLootObject(FunnyFaunaItems.COARSEHIDE.getDefaultStack(), 1, 4));
 		burningMobDrops.add(new WeightedRandomLootObject(Items.FOOD_PORKCHOP_COOKED.getDefaultStack(), 1, 2));
 	}
 	@Override

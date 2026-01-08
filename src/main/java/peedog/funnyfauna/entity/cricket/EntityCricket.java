@@ -3,8 +3,6 @@ package peedog.funnyfauna.entity.cricket;
 import com.mojang.nbt.tags.CompoundTag;
 import net.minecraft.core.entity.Entity;
 import net.minecraft.core.entity.player.Player;
-import net.minecraft.core.item.Item;
-import net.minecraft.core.item.ItemBucketEmpty;
 import net.minecraft.core.item.ItemStack;
 import net.minecraft.core.item.Items;
 import net.minecraft.core.util.helper.MathHelper;
@@ -16,20 +14,20 @@ public class EntityCricket extends Entity {
 
 	private static final double GRAVITY = 0.04;
 	private static final double HOP_Y = 0.22;
-	private static final double HOP_Y_BOOST = 0.4; // Higher hop if near block
+	private static final double HOP_Y_BOOST = 0.4;
 	private static final double HOP_XZ = 0.12;
+
+	private static final double SQUASH_DISTANCE = 0.4;
 
 	private int hopCooldown = 0;
 	private boolean airborne = false;
 	private int animFrame = 0;
 	private int variant;
 
-
 	public EntityCricket(World world) {
 		super(world);
 		this.setSize(0.3F, 0.25F);
-		this.variant = 1 + random.nextInt(4); // variants 1–4
-
+		this.variant = 1 + random.nextInt(4);
 	}
 
 	@Override
@@ -39,16 +37,17 @@ public class EntityCricket extends Entity {
 	public void tick() {
 		super.tick();
 
+		checkForSquash();
+
 		// === Gravity ===
 		if (!onGround) {
 			yd -= GRAVITY;
 			airborne = true;
 		}
 
-		// === Apply movement ===
 		move(xd, yd, zd);
 
-		// === Collision & onGround check ===
+		// === Ground collision ===
 		int blockX = MathHelper.floor(x);
 		int blockY = MathHelper.floor(y - 0.01);
 		int blockZ = MathHelper.floor(z);
@@ -59,7 +58,7 @@ public class EntityCricket extends Entity {
 			airborne = false;
 		}
 
-		// === Ground movement damping ===
+		// === Ground logic ===
 		if (onGround) {
 			xd *= 0.7;
 			zd *= 0.7;
@@ -72,13 +71,36 @@ public class EntityCricket extends Entity {
 		}
 
 		updateAnimation();
+	}
 
-		// === DEBUG ===
+	/* ===================== Squash Logic ===================== */
+	private void checkForSquash() {
+		Player player = world.getClosestPlayerToEntity(this, 0.8);
+		if (player == null) return;
+
+		if (this.distanceTo(player) < SQUASH_DISTANCE) {
+
+			// Client: spawn particle
+			if (world.isClientSide) {
+				world.spawnParticle(
+					"bug_squash",
+					this.x,
+					this.y + 0.01,
+					this.z,
+					0, 0, 0,
+					0
+				);
+			}
+
+			// Server: remove entity
+			if (!world.isClientSide) {
+				this.remove();
+			}
+		}
 	}
 
 	/* ===================== Smart Hop ===================== */
 	private void doSmartHop() {
-		// Check for neighboring blocks horizontally (X ±1, Z ±1)
 		boolean nearBlock = false;
 		int bx = MathHelper.floor(x);
 		int by = MathHelper.floor(y);
@@ -86,7 +108,7 @@ public class EntityCricket extends Entity {
 
 		for (int dx = -1; dx <= 1 && !nearBlock; dx++) {
 			for (int dz = -1; dz <= 1 && !nearBlock; dz++) {
-				if (dx == 0 && dz == 0) continue; // skip center
+				if (dx == 0 && dz == 0) continue;
 				if (world.isBlockNormalCube(bx + dx, by, bz + dz)) {
 					nearBlock = true;
 				}
@@ -95,19 +117,14 @@ public class EntityCricket extends Entity {
 
 		double hopY = nearBlock ? HOP_Y_BOOST : HOP_Y;
 
-		// Random horizontal direction
 		float angle = random.nextFloat() * (float)Math.PI * 2F;
 		xd = MathHelper.cos(angle) * HOP_XZ;
 		zd = MathHelper.sin(angle) * HOP_XZ;
-
 		yd = hopY;
 
-		yRot = (float) (Math.atan2(zd, xd) * 180.0 / Math.PI) - 90.0F;
-
+		yRot = (float)(Math.atan2(zd, xd) * 180.0 / Math.PI) - 90.0F;
 		hopCooldown = 15 + random.nextInt(30);
-
 	}
-
 
 	/* ===================== Animation ===================== */
 	private void updateAnimation() {
@@ -122,54 +139,43 @@ public class EntityCricket extends Entity {
 		return variant;
 	}
 
-	public boolean isPickable() {return !this.removed;}
+	@Override
+	public boolean isPickable() {
+		return !this.removed;
+	}
 
+	/* ===================== Interaction ===================== */
 	@Override
 	public boolean interact(@NotNull Player player) {
-		System.out.println("[FunnyFauna] Cricket interact called");
 		ItemStack held = player.inventory.getCurrentItem();
 
-		// Only capture with empty jar
 		if (held != null && held.itemID == Items.JAR.id) {
-
-			// Server-side only
 			if (!player.world.isClientSide) {
-
-				// Remove ONE empty jar from the current slot
 				int slot = player.inventory.getCurrentItemIndex();
 				player.inventory.removeItem(slot, 1);
 
-				// Create cricket jar item
 				ItemStack cricketJar = new ItemStack(FunnyFaunaItems.JAR_CRICKET);
-
-				// Optional: store variant
 				CompoundTag tag = new CompoundTag();
 				tag.putInt("Variant", this.variant);
 				cricketJar.setData(tag);
 
-				// Try to insert into inventory
 				player.inventory.insertItem(cricketJar, true);
-
-				// If insertion failed (still has stack size), drop it
 				if (cricketJar.stackSize > 0) {
 					player.dropPlayerItemWithRandomChoice(cricketJar, false);
 				}
 
-				// Remove the cricket entity
 				this.remove();
 			}
-
 			return true;
 		}
 
-		return super.interact(player);
-	}
-
-	protected boolean makeStepSound() {
 		return false;
 	}
 
-
+	@Override
+	protected boolean makeStepSound() {
+		return false;
+	}
 
 	/* ===================== Save ===================== */
 	@Override
@@ -185,5 +191,4 @@ public class EntityCricket extends Entity {
 		tag.putInt("HopCooldown", hopCooldown);
 		tag.putInt("Variant", variant);
 	}
-
 }

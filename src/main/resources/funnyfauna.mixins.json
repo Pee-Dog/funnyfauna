@@ -8,7 +8,8 @@
   "mixins": [
     "accessors.EntityAccessor",
     "player.PlayerMixin",
-    "player.PlayerControllerMixin"
+    "player.PlayerControllerMixin",
+    "WorldMixin"
   ],
   "client": [
     "PacketHandlerClientMixin",

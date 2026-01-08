@@ -19,6 +19,7 @@ import peedog.funnyfauna.block.FunnyFaunaBlocks;
 import peedog.funnyfauna.block.entity.TileEntityEmuEgg;
 import peedog.funnyfauna.entity.FunnyFaunaEntities;
 import peedog.funnyfauna.entity.armadillo.MobArmadillo;
+import peedog.funnyfauna.entity.boar.MobBoar;
 import peedog.funnyfauna.entity.camel.MobCamel;
 import peedog.funnyfauna.entity.emu.MobEmu;
 import peedog.funnyfauna.entity.lizard.MobLizard;
@@ -67,19 +68,17 @@ public class FunnyFauna implements ModInitializer, RecipeEntrypoint, GameStartEn
 		NamespaceID emuEggId = NamespaceID.getPermanent(MOD_ID, "emu_egg");
 		TileEntityDispatcher.addMapping(TileEntityEmuEgg.class, emuEggId);
 		removeVanillaPassives(Biomes.OVERWORLD_TUNDRA);
-		Biomes.OVERWORLD_TUNDRA.getSpawnableList(MobCategory.creature).add(new SpawnListEntry(MobPenguin.class, 10));
 		removeVanillaPassives(Biomes.OVERWORLD_GLACIER);
-		Biomes.OVERWORLD_GLACIER.getSpawnableList(MobCategory.creature).add(new SpawnListEntry(MobPenguin.class, 10));
 		removeVanillaPassives(Biomes.OVERWORLD_TAIGA);
+		removeVanillaPassives(Biomes.OVERWORLD_OUTBACK_GRASSY);
+		Biomes.OVERWORLD_TUNDRA.getSpawnableList(MobCategory.creature).add(new SpawnListEntry(MobPenguin.class, 10));
+		Biomes.OVERWORLD_GLACIER.getSpawnableList(MobCategory.creature).add(new SpawnListEntry(MobPenguin.class, 10));
 		Biomes.OVERWORLD_TAIGA.getSpawnableList(MobCategory.creature).add(new SpawnListEntry(MobPenguin.class, 10));
 		Biomes.OVERWORLD_DESERT.getSpawnableList(MobCategory.creature).add(new SpawnListEntry(MobLizard.class, 10));
 		Biomes.OVERWORLD_CAATINGA.getSpawnableList(MobCategory.creature).add(new SpawnListEntry(MobLizard.class, 10));
 		Biomes.OVERWORLD_CAATINGA_PLAINS.getSpawnableList(MobCategory.creature).add(new SpawnListEntry(MobLizard.class, 10));
 		Biomes.OVERWORLD_OUTBACK.getSpawnableList(MobCategory.creature).add(new SpawnListEntry(MobLizard.class, 10));
 		Biomes.OVERWORLD_OUTBACK_GRASSY.getSpawnableList(MobCategory.creature).add(new SpawnListEntry(MobLizard.class, 10));
-		Biomes.OVERWORLD_DESERT.getSpawnableList(MobCategory.creature).add(new SpawnListEntry(MobEmu.class, 10));
-		Biomes.OVERWORLD_CAATINGA.getSpawnableList(MobCategory.creature).add(new SpawnListEntry(MobEmu.class, 10));
-		Biomes.OVERWORLD_CAATINGA_PLAINS.getSpawnableList(MobCategory.creature).add(new SpawnListEntry(MobEmu.class, 10));
 		Biomes.OVERWORLD_OUTBACK.getSpawnableList(MobCategory.creature).add(new SpawnListEntry(MobEmu.class, 10));
 		Biomes.OVERWORLD_OUTBACK_GRASSY.getSpawnableList(MobCategory.creature).add(new SpawnListEntry(MobEmu.class, 10));
 		Biomes.OVERWORLD_DESERT.getSpawnableList(MobCategory.creature).add(new SpawnListEntry(MobCamel.class, 10));
@@ -92,6 +91,8 @@ public class FunnyFauna implements ModInitializer, RecipeEntrypoint, GameStartEn
 		Biomes.OVERWORLD_CAATINGA_PLAINS.getSpawnableList(MobCategory.creature).add(new SpawnListEntry(MobArmadillo.class, 10));
 		Biomes.OVERWORLD_OUTBACK.getSpawnableList(MobCategory.creature).add(new SpawnListEntry(MobArmadillo.class, 10));
 		Biomes.OVERWORLD_OUTBACK_GRASSY.getSpawnableList(MobCategory.creature).add(new SpawnListEntry(MobArmadillo.class, 10));
+		Biomes.OVERWORLD_CAATINGA.getSpawnableList(MobCategory.creature).add(new SpawnListEntry(MobBoar.class, 10));
+		Biomes.OVERWORLD_OUTBACK_GRASSY.getSpawnableList(MobCategory.creature).add(new SpawnListEntry(MobBoar.class, 10));
 		NetworkHandler.registerNetworkMessage(FunnyRideableNetworkMessage::new);
 		LOGGER.info("Funny Fauna initialized.");
 	}
@@ -110,7 +111,8 @@ public class FunnyFauna implements ModInitializer, RecipeEntrypoint, GameStartEn
 
 
 	@Override
-	public void afterGameStart() {}
+	public void afterGameStart() {
+	}
 
 	public static Entity createEntity(Class<? extends Entity> entityClass, World world) {
 		try {

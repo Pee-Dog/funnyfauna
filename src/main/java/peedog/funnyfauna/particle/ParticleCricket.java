@@ -34,7 +34,7 @@ public class ParticleCricket extends Particle {
 		this.setScale(0.6F);
 		this.rCol = this.gCol = this.bCol = 1.0F;
 
-		this.tex = TextureRegistry.getTexture("funnyfauna:entity/cricket/cricket1_a");
+		this.tex = TextureRegistry.getTexture("funnyfauna:particle/cricket/cricket1_a");
 
 		// Effectively infinite
 		this.lifetime = Integer.MAX_VALUE;
