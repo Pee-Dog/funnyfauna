@@ -1,6 +1,7 @@
 package peedog.funnyfauna.entity.lizard;
 
 import com.mojang.nbt.tags.CompoundTag;
+import net.minecraft.core.WeightedRandomLootObject;
 import net.minecraft.core.block.Block;
 import net.minecraft.core.block.Blocks;
 import net.minecraft.core.entity.Entity;
@@ -30,6 +31,7 @@ public class MobLizard extends MobAnimal {
 		super(world);
 		this.textureIdentifier = NamespaceID.getPermanent("funnyfauna", "lizard");
 		this.setSize(1F, 0.5F);
+		this.mobDrops.add(new WeightedRandomLootObject(FunnyFaunaItems.SCALES.getDefaultStack(), 2, 4));
 	}
 	@Override
 	public int getMaxHealth() {

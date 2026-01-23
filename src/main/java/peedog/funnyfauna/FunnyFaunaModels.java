@@ -30,6 +30,7 @@ import peedog.funnyfauna.entity.lizard.MobLizard;
 import peedog.funnyfauna.entity.penguin.MobPenguin;
 import peedog.funnyfauna.entity.projectile.ProjectileBigEgg;
 import peedog.funnyfauna.item.FunnyFaunaItems;
+import peedog.funnyfauna.item.ItemSturdyShell;
 import turniplabs.halplibe.helper.ModelHelper;
 import turniplabs.halplibe.util.ModelEntrypoint;
 
@@ -50,6 +51,8 @@ public class FunnyFaunaModels implements ModelEntrypoint {
 		dispatcher.addDispatch(new ItemModelStandard(FunnyFaunaItems.FOOD_BLUBBER, null).setIcon("funnyfauna:item/food_blubber"));
 		dispatcher.addDispatch(new ItemModelStandard(FunnyFaunaItems.EGG_EMU, null).setIcon("funnyfauna:item/egg_emu"));
 		dispatcher.addDispatch(new ItemModelStandard(FunnyFaunaItems.JAR_CRICKET, null).setIcon("funnyfauna:item/jar_cricket"));
+		dispatcher.addDispatch(new ItemModelStandard(FunnyFaunaItems.SCALES, null).setIcon("funnyfauna:item/scales"));
+		dispatcher.addDispatch(new ItemModelStandard(FunnyFaunaItems.SCUTE, null).setIcon("funnyfauna:item/scute"));
 		dispatcher.addDispatch(new ItemModelStandard(FunnyFaunaItems.ARM_EXTENSION, null) {
 		private final IconCoordinate OFF =
 			TextureRegistry.getTexture("funnyfauna:item/arm_extension_off");
@@ -60,6 +63,18 @@ public class FunnyFaunaModels implements ModelEntrypoint {
 			@Override
 			public IconCoordinate getIcon(Entity entity, ItemStack stack) {
 				return stack.getMetadata() == 1 ? ON : OFF;
+			}
+		});
+		dispatcher.addDispatch(new ItemModelStandard(FunnyFaunaItems.STURDY_SHELL, null) {
+			private final IconCoordinate OFF =
+				TextureRegistry.getTexture("funnyfauna:item/sturdy_shell_off");
+
+			private final IconCoordinate ON =
+				TextureRegistry.getTexture("funnyfauna:item/sturdy_shell_on");
+
+			@Override
+			public IconCoordinate getIcon(Entity entity, ItemStack stack) {
+				return ItemSturdyShell.isEnabled(stack) ? ON : OFF;
 			}
 		});
 

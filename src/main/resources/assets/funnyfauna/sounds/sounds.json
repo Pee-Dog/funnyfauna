@@ -102,5 +102,13 @@
     "sounds": [
       "mob/horse/angry.ogg"
     ]
+  },
+  "mob.armadillo.idle": {
+    "subtitle": "subtitles.mob.armadillo.idle",
+    "sounds": [
+      "mob/armadillo/idle1.ogg",
+      "mob/armadillo/idle2.ogg",
+      "mob/armadillo/idle3.ogg"
+    ]
   }
 }

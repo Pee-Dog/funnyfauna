@@ -38,7 +38,7 @@ public class FunnyFauna implements ModInitializer, RecipeEntrypoint, GameStartEn
 	public static final Logger LOGGER = LoggerFactory.getLogger(MOD_ID);
 	public static int GUI_LABEL_COLOR = 0x404040;
 	public static int GUI_SATCHEL_ID;
-	public static int itemID;
+	public static int itemid;
 
 	private static void removeVanillaPassives(Biome biome) {
 		biome.getSpawnableList(MobCategory.creature)

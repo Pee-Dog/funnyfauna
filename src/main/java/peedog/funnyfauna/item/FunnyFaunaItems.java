@@ -22,6 +22,9 @@ public class FunnyFaunaItems {
 	public static Item EGG_EMU;
 	public static Item ARM_EXTENSION;
 	public static Item JAR_CRICKET;
+	public static Item SCALES;
+	public static Item SCUTE;
+	public static Item STURDY_SHELL;
 
 
 
@@ -45,7 +48,12 @@ public class FunnyFaunaItems {
 			.build(new ItemArmExtension("arm_extension", "funnyfauna:item/arm_extension", itemID++));
 		JAR_CRICKET = new ItemBuilder(MOD_ID)
 			.build(new ItemJarAnimal("jar_cricket", "funnyfauna:item/jar_cricket", itemID++, () -> FunnyFaunaBlocks.JAR_CRICKET, (world, player) -> new EntityCricket(world)));
-
+		SCALES = new ItemBuilder(MOD_ID)
+			.build(new ItemScales("scales", "funnyfauna:item/scales", itemID++));
+		SCUTE = new ItemBuilder(MOD_ID)
+			.build(new Item("scute", "funnyfauna:item/scute", itemID++));
+		STURDY_SHELL = new ItemBuilder(MOD_ID)
+			.build(new ItemSturdyShell("sturdy_shell", "funnyfauna:item/sturdy_shell", itemID++));
 
 	}
 }

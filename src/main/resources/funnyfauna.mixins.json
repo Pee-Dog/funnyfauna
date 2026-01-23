@@ -9,7 +9,9 @@
     "accessors.EntityAccessor",
     "player.PlayerMixin",
     "player.PlayerControllerMixin",
-    "WorldMixin"
+    "WorldMixin",
+    "ScreenContainerAbstractMixin",
+    "player.PlayerSturdyShellMixin"
   ],
   "client": [
     "PacketHandlerClientMixin",
