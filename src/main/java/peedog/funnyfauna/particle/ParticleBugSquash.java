@@ -10,58 +10,56 @@ import net.minecraft.core.world.World;
 @Environment(EnvType.CLIENT)
 public class ParticleBugSquash extends Particle {
 
-	public ParticleBugSquash(World world, double x, double y, double z) {
-		super(world, x, y, z, 0, 0, 0);
+	private final float rotation; // rotation around vertical axis
 
-		// Use TextureRegistry instead of passing IconCoordinate
-		this.tex = TextureRegistry.getTexture("funnyfauna:particle/bug_squash");
+	public ParticleBugSquash(World world, double x, double y, double z, double xd, double yd, double zd, float scale) {
+		super(world, x, y, z, 0, 0, 0); // no motion
+		this.size = scale;
+		this.tex = TextureRegistry.getTexture("funnyfauna:particle/bug_squash"); // must exist!
+		this.lifetime = 100;
 
-		this.gravity = 0.0F;
-		this.lifetime = 40;
-		this.size = 1.0F;
+		// Random rotation around vertical axis (Y-axis)
+		this.rotation = world.rand.nextFloat() * 2.0f * (float)Math.PI;
 
-		// Lock it to ground
+		// Ensure no motion
 		this.xd = this.yd = this.zd = 0;
-		this.noPhysics = true;
-		this.y -= 0.01; // avoid z-fighting
 	}
 
 	@Override
 	public void tick() {
-		if (++age >= lifetime) {
-			remove();
-		}
+		super.tick();
+		if (age++ >= lifetime) this.remove();
+		// Fixed in place
+		this.xd = this.yd = this.zd = 0;
 	}
 
 	@Override
-	public void render(
-		Tessellator t,
-		float partialTick,
-		double xOff,
-		double yOff,
-		double zOff,
-		float xa,
-		float ya,
-		float za,
-		float xa2,
-		float za2
-	) {
-		float u0 = (float) tex.getIconUMin();
-		float u1 = (float) tex.getIconUMax();
-		float v0 = (float) tex.getIconVMin();
-		float v1 = (float) tex.getIconVMax();
+	public void render(Tessellator t, float partialTick, double xOff, double yOff, double zOff,
+					   float xa, float ya, float za, float xa2, float za2) {
+		if (this.tex == null) return;
 
-		float x = (float)(this.x - xOff);
-		float y = (float)(this.y - yOff);
-		float z = (float)(this.z - zOff);
-		float r = 0.25F;
+		// Particle position interpolated
+		double px = this.xo + (this.x - this.xo) * partialTick - xOff;
+		double py = this.yo + (this.y - this.yo) * partialTick - yOff;
+		double pz = this.zo + (this.z - this.zo) * partialTick - zOff;
 
-		t.setColorOpaque_F(1F, 1F, 1F);
+		float halfSize = this.size * 0.5f;
 
-		// Flat quad on XZ plane (footprint)
-		t.addVertexWithUV(x - r, y, z - r, u0, v1);
-		t.addVertexWithUV(x - r, y, z + r, u0, v0);
-		t.addVertexWithUV(x + r, y, z + r, u1, v0);
-		t.addVertexWithUV(x + r, y, z - r, u1, v1);
+		// Texture coordinates
+		float u0 = (float) this.tex.getIconUMin();
+		float u2 = (float) this.tex.getIconUMax();
+		float v0 = (float) this.tex.getIconVMin();
+		float v2 = (float) this.tex.getIconVMax();
+
+		t.setColorOpaque_F(this.rCol, this.gCol, this.bCol);
+
+		// Rotate only in XZ plane
+		double cos = Math.cos(rotation) * halfSize;
+		double sin = Math.sin(rotation) * halfSize;
+
+		t.addVertexWithUV(px - cos, py, pz - sin, u0, v2);
+		t.addVertexWithUV(px - cos, py, pz + sin, u0, v0);
+		t.addVertexWithUV(px + cos, py, pz + sin, u2, v0);
+		t.addVertexWithUV(px + cos, py, pz - sin, u2, v2);
 	}
 }

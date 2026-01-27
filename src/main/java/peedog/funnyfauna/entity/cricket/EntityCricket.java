@@ -1,6 +1,8 @@
 package peedog.funnyfauna.entity.cricket;
 
 import com.mojang.nbt.tags.CompoundTag;
+import net.minecraft.client.entity.particle.ParticleDispatcher;
+import net.minecraft.client.entity.particle.ParticleLambda;
 import net.minecraft.core.entity.Entity;
 import net.minecraft.core.entity.player.Player;
 import net.minecraft.core.item.ItemStack;
@@ -8,6 +10,7 @@ import net.minecraft.core.item.Items;
 import net.minecraft.core.util.helper.MathHelper;
 import net.minecraft.core.world.World;
 import org.jetbrains.annotations.NotNull;
+import peedog.funnyfauna.FunnyFaunaClient;
 import peedog.funnyfauna.item.FunnyFaunaItems;
 
 public class EntityCricket extends Entity {
@@ -17,29 +20,47 @@ public class EntityCricket extends Entity {
 	private static final double HOP_Y_BOOST = 0.4;
 	private static final double HOP_XZ = 0.12;
 
-	private static final double SQUASH_DISTANCE = 0.4;
-
 	private int hopCooldown = 0;
 	private boolean airborne = false;
 	private int animFrame = 0;
-	private int variant;
+
+	/** Stored RGB color (0xRRGGBB) */
+	private int color;
 
 	public EntityCricket(World world) {
 		super(world);
 		this.setSize(0.3F, 0.25F);
-		this.variant = 1 + random.nextInt(4);
+
+		// Generate color ONCE on server
+		if (!world.isClientSide) {
+			this.color = generateCricketColor();
+		}
 	}
 
 	@Override
 	protected void defineSynchedData() {}
 
+	/* ===================== Color ===================== */
+
+	private int generateCricketColor() {
+		float hue = 0.22F + random.nextFloat() * 0.1F;
+		float sat = 0.4F + random.nextFloat() * 0.4F;
+		float val = 0.4F + random.nextFloat() * 0.4F;
+
+		return java.awt.Color.HSBtoRGB(hue, sat, val) & 0xFFFFFF;
+	}
+
+	public int getColor() {
+		return color;
+	}
+
+	/* ===================== Tick ===================== */
+
 	@Override
 	public void tick() {
 		super.tick();
 
-		checkForSquash();
-
-		// === Gravity ===
+		// ===================== Physics =====================
 		if (!onGround) {
 			yd -= GRAVITY;
 			airborne = true;
@@ -47,7 +68,6 @@ public class EntityCricket extends Entity {
 
 		move(xd, yd, zd);
 
-		// === Ground collision ===
 		int blockX = MathHelper.floor(x);
 		int blockY = MathHelper.floor(y - 0.01);
 		int blockZ = MathHelper.floor(z);
@@ -58,7 +78,6 @@ public class EntityCricket extends Entity {
 			airborne = false;
 		}
 
-		// === Ground logic ===
 		if (onGround) {
 			xd *= 0.7;
 			zd *= 0.7;
@@ -71,35 +90,48 @@ public class EntityCricket extends Entity {
 		}
 
 		updateAnimation();
+
+
+
+
 	}
 
-	/* ===================== Squash Logic ===================== */
-	private void checkForSquash() {
-		Player player = world.getClosestPlayerToEntity(this, 0.8);
-		if (player == null) return;
 
-		if (this.distanceTo(player) < SQUASH_DISTANCE) {
+	/* ===================== Squash (FIXED) ===================== */
 
-			// Client: spawn particle
-			if (world.isClientSide) {
-				world.spawnParticle(
-					"bug_squash",
-					this.x,
-					this.y + 0.01,
-					this.z,
-					0, 0, 0,
-					0
-				);
-			}
+	@Override
+	public void playerTouch(Player player) {
+		if (!this.onGround) return;
+		if (player.y <= this.y + 0.05) return;
 
-			// Server: remove entity
-			if (!world.isClientSide) {
-				this.remove();
-			}
+		double dx = player.x - this.x;
+		double dz = player.z - this.z;
+		if (dx * dx + dz * dz > 0.25 * 0.25) return;
+
+		System.out.println("Cricket stepped on! Player at " + player.x + "," + player.y + "," + player.z);
+
+		world.spawnParticle("bug_squash", x, y + 0.01, z, 0.0, 0.2, 0.0, 0);
+
+
+		if (!world.isClientSide) {
+			System.out.println("Removing cricket on server");
+			this.remove();
 		}
 	}
 
-	/* ===================== Smart Hop ===================== */
+
+
+
+
+
+
+
+
+
+
+
+	/* ===================== Hop ===================== */
+
 	private void doSmartHop() {
 		boolean nearBlock = false;
 		int bx = MathHelper.floor(x);
@@ -127,6 +159,7 @@ public class EntityCricket extends Entity {
 	}
 
 	/* ===================== Animation ===================== */
+
 	private void updateAnimation() {
 		animFrame = airborne ? 1 : 0;
 	}
@@ -135,16 +168,8 @@ public class EntityCricket extends Entity {
 		return animFrame;
 	}
 
-	public int getVariant() {
-		return variant;
-	}
-
-	@Override
-	public boolean isPickable() {
-		return !this.removed;
-	}
-
 	/* ===================== Interaction ===================== */
+
 	@Override
 	public boolean interact(@NotNull Player player) {
 		ItemStack held = player.inventory.getCurrentItem();
@@ -156,7 +181,7 @@ public class EntityCricket extends Entity {
 
 				ItemStack cricketJar = new ItemStack(FunnyFaunaItems.JAR_CRICKET);
 				CompoundTag tag = new CompoundTag();
-				tag.putInt("Variant", this.variant);
+				tag.putInt("CricketColor", this.color);
 				cricketJar.setData(tag);
 
 				player.inventory.insertItem(cricketJar, true);
@@ -172,23 +197,32 @@ public class EntityCricket extends Entity {
 		return false;
 	}
 
+	/* ===================== Required ===================== */
+
+	@Override
+	public boolean isPickable() {
+		return true;
+	}
+
 	@Override
 	protected boolean makeStepSound() {
 		return false;
 	}
 
 	/* ===================== Save ===================== */
+
 	@Override
 	public void readAdditionalSaveData(CompoundTag tag) {
 		hopCooldown = tag.getInteger("HopCooldown");
-		if (tag.containsKey("Variant")) {
-			variant = tag.getInteger("Variant");
+
+		if (tag.containsKey("CricketColor")) {
+			color = tag.getInteger("CricketColor");
 		}
 	}
 
 	@Override
 	public void addAdditionalSaveData(CompoundTag tag) {
 		tag.putInt("HopCooldown", hopCooldown);
-		tag.putInt("Variant", variant);
+		tag.putInt("CricketColor", color);
 	}
 }
