@@ -15,6 +15,8 @@ public final class FunnyFaunaBlocks implements BlockInitEntrypoint {
 	public static Block<?> EGG_EMU_BLOCK;
 	public static Block<?> ANT_HILL;
 	public static Block<?> JAR_CRICKET;
+	public static Block<?> CACTUS_GOLDEN;
+
 
 	public static void init() {
 		if (!hasInit) {
@@ -40,7 +42,6 @@ public final class FunnyFaunaBlocks implements BlockInitEntrypoint {
 			.setTicking(true)
 			.setResistance(0.1f)
 			.build("jar.cricket", "jar_cricket", blockID++, block -> new BlockLogicJarCricket(block, () -> FunnyFaunaItems.JAR_CRICKET));
-
 
 
 	}

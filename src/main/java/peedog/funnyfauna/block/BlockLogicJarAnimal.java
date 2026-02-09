@@ -1,3 +1,4 @@
+// BlockLogicJarAnimal.java
 package peedog.funnyfauna.block;
 
 import net.minecraft.core.block.Block;
@@ -32,10 +33,7 @@ public abstract class BlockLogicJarAnimal extends BlockLogic {
 		);
 	}
 
-    /* =====================
-       RENDERING
-       ===================== */
-
+	/* ===================== RENDERING ===================== */
 	@Override
 	public boolean isSolidRender() {
 		return false;
@@ -46,10 +44,7 @@ public abstract class BlockLogicJarAnimal extends BlockLogic {
 		return false;
 	}
 
-    /* =====================
-       INTERACTION
-       ===================== */
-
+	/* ===================== INTERACTION ===================== */
 	@Override
 	public boolean onBlockRightClicked(
 		World world, int x, int y, int z,
@@ -66,16 +61,10 @@ public abstract class BlockLogicJarAnimal extends BlockLogic {
 		return true;
 	}
 
-    /* =====================
-       BREAKING
-       ===================== */
-
+	/* ===================== BREAKING ===================== */
 	@Override
 	public ItemStack[] getBreakResult(
-		World world,
-		EnumDropCause dropCause,
-		int meta,
-		TileEntity tileEntity
+		World world, EnumDropCause dropCause, int meta, TileEntity tileEntity
 	) {
 		switch (dropCause) {
 			case PICK_BLOCK:
@@ -87,26 +76,7 @@ public abstract class BlockLogicJarAnimal extends BlockLogic {
 		}
 	}
 
-	@Override
-	public void onBlockDestroyedByPlayer(
-		World world, int x, int y, int z,
-		Side side, int meta,
-		Player player, Item item
-	) {
-		if (item == null || !item.isSilkTouch()) {
-			if (!world.isClientSide) {
-				Entity entity = createReleasedEntity(world, x, y, z);
-				if (entity != null) {
-					world.entityJoinedWorld(entity);
-				}
-			}
-		}
-	}
-
-    /* =====================
-       PLACEMENT / SUPPORT
-       ===================== */
-
+	/* ===================== PLACEMENT / SUPPORT ===================== */
 	@Override
 	public boolean canBlockStay(World world, int x, int y, int z) {
 		return world.canPlaceOnSurfaceOfBlock(x, y - 1, z);
@@ -121,12 +91,9 @@ public abstract class BlockLogicJarAnimal extends BlockLogic {
 	public void onNeighborBlockChange(World world, int x, int y, int z, int blockId) {
 		if (!this.canBlockStay(world, x, y, z)) {
 			this.dropBlockWithCause(
-				world,
-				EnumDropCause.WORLD,
-				x, y, z,
+				world, EnumDropCause.WORLD, x, y, z,
 				world.getBlockMetadata(x, y, z),
-				null,
-				null
+				null, null
 			);
 			world.setBlockWithNotify(x, y, z, 0);
 		}
@@ -137,12 +104,39 @@ public abstract class BlockLogicJarAnimal extends BlockLogic {
 		return 1;
 	}
 
-    /* =====================
-       EXTENSION POINT
-       ===================== */
-
+	/* ===================== EXTENSION POINT ===================== */
 	/**
 	 * Create the animal released when the jar breaks.
 	 */
-	protected abstract Entity createReleasedEntity(World world, int x, int y, int z);
+	@Override
+	public void onBlockDestroyedByPlayer(
+		World world, int x, int y, int z, Side side, int meta, Player player, Item item) {
+
+		if (item == null || !item.isSilkTouch()) {
+			if (!world.isClientSide) {
+
+				// --- CAPTURE TILEENTITY BEFORE REMOVING BLOCK ---
+				TileEntity te = world.getTileEntity(x, y, z);
+
+				// Remove the block
+				world.setBlockWithNotify(x, y, z, 0);
+
+				// Spawn the cricket
+				Entity entity = createReleasedEntity(world, x, y, z, te);
+				if (entity != null) {
+					world.entityJoinedWorld(entity);
+				}
+
+				world.playSoundAtEntity(player, player, "item.pickup", 1.0F, 1.0F);
+			}
+		}
+	}
+
+
+	/* ===================== EXTENSION POINT ===================== */
+	/**
+	 * Create the animal released when the jar breaks.
+	 * @param te The TileEntity of the jar before destruction (may be null)
+	 */
+	protected abstract Entity createReleasedEntity(World world, int x, int y, int z, TileEntity te);
 }

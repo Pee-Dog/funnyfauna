@@ -40,14 +40,34 @@ public class MobRendererArmadillo extends MobRenderer<MobArmadillo> {
 		BoneTransform legBackLeft = model.getTransform("leg3");
 		BoneTransform legBackRight = model.getTransform("leg4");
 		BoneTransform tail = model.getTransform("tail");
+		BoneTransform body = model.getTransform("body");
 
-		head.rotX = headPitch;
-		head.rotY = headYaw;
-
+		// -----------------------------
+		// Base animation (walking)
+		// -----------------------------
 		legFrontLeft.rotX = legBackRight.rotX =
 			MathHelper.cos(limbSwing * 0.6662F) * 1.4F * limbYaw;
 		legFrontRight.rotX = legBackLeft.rotX =
 			MathHelper.cos(limbSwing * 0.6662F + 3.141593F) * 1.4F * limbYaw;
+
+		head.rotX = headPitch;
+		head.rotY = headYaw;
+
+		// -----------------------------
+		// COWER animation
+		// -----------------------------
+		float crouch = entity.getCowerProgress(partialTick);
+		if (crouch > 0) {
+			// Lower and compress body
+			body.posY -= crouch;
+
+			// Head tucks down
+			head.posY -= crouch;
+			head.rotX += 0.3F * crouch;
+
+			// Tail curl
+			tail.rotX += 0.4F * crouch;
+		}
 
 		return model;
 	}

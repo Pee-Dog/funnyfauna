@@ -1,196 +1,386 @@
 package peedog.funnyfauna.entity.lizard;
 
 import com.mojang.nbt.tags.CompoundTag;
-import net.minecraft.core.WeightedRandomLootObject;
-import net.minecraft.core.block.Block;
-import net.minecraft.core.block.Blocks;
+import net.minecraft.client.Minecraft;
+import net.minecraft.core.Global;
 import net.minecraft.core.entity.Entity;
-import net.minecraft.core.entity.animal.MobAnimal;
-import net.minecraft.core.entity.animal.MobSheep;
+import net.minecraft.core.entity.player.Player;
 import net.minecraft.core.item.ItemStack;
-import net.minecraft.core.item.Items;
+import net.minecraft.core.net.packet.PacketSetRiding;
 import net.minecraft.core.util.collection.NamespaceID;
 import net.minecraft.core.util.helper.DamageType;
 import net.minecraft.core.util.helper.MathHelper;
-import net.minecraft.core.util.phys.AABB;
-import net.minecraft.core.util.phys.Vec3;
+import net.minecraft.core.world.IVehicle;
 import net.minecraft.core.world.World;
 import net.minecraft.core.world.pathfinder.Path;
+import net.minecraft.server.MinecraftServer;
 import org.jetbrains.annotations.NotNull;
-import peedog.funnyfauna.entity.cricket.EntityCricket;
+import org.jetbrains.annotations.Nullable;
+import peedog.funnyfauna.entity.MobTaskrunner;
+import peedog.funnyfauna.entity.ai.controllers.LizardTask;
+import peedog.funnyfauna.entity.ai.Task;
+import peedog.funnyfauna.entity.ai.i.IFleeable;
 import peedog.funnyfauna.item.FunnyFaunaItems;
+import turniplabs.halplibe.helper.EnvironmentHelper;
 
-import java.util.List;
+public class MobLizard extends MobTaskrunner implements IFleeable {
 
-public class MobLizard extends MobAnimal {
-	private int tickTargetCooldown = 0; // prevents switching crickets too often
-	private static final double EAT_DISTANCE = 1.5; // distance at which cricket is eaten
-	private static final int TARGET_COOLDOWN = 20; // ticks to wait before picking new target
+	private static final int DATA_FLAGS = 16;
+	private static final int DATA_OWNER_UUID = 17;
+
+
+	private @Nullable Entity preyTarget = null;
+	private @Nullable Path pathToEntity = null;
+	private @Nullable String ownerUUID = null;
+
+	private int ridingCooldown = 20;
+	private boolean wasEjected = false;
+
+	private int fleeTimer = 0;
+
+	private Entity fleeTarget;
 
 	public MobLizard(World world) {
 		super(world);
 		this.textureIdentifier = NamespaceID.getPermanent("funnyfauna", "lizard");
 		this.setSize(1F, 0.5F);
-		this.mobDrops.add(new WeightedRandomLootObject(FunnyFaunaItems.SCALES.getDefaultStack(), 2, 4));
+		this.mobDrops.add(new net.minecraft.core.WeightedRandomLootObject(
+			FunnyFaunaItems.SCALES.getDefaultStack(), 1, 3));
+
 	}
+
+
+	@Override
+	public void defineSynchedData() {
+		super.defineSynchedData();
+		this.entityData.define(DATA_FLAGS, (byte)0, Byte.class);
+		this.entityData.define(DATA_OWNER_UUID, (String)null, String.class);
+
+		this.setHasTail(true);
+	}
+
+	@Override
+	public Task<MobLizard> createTask() {
+		return new LizardTask(this);
+	}
+
+	private byte getFlags() {
+		return this.entityData.getByte(DATA_FLAGS);
+	}
+
+	private void setFlags(byte flags) {
+		this.entityData.set(DATA_FLAGS, flags);
+	}
+
+	public boolean isTamed() {
+		return (getFlags() & 1) != 0;
+	}
+
+	public void setTamed(boolean tamed) {
+		byte f = getFlags();
+		setFlags(tamed ? (byte)(f | 1) : (byte)(f & ~1));
+	}
+
+	public boolean hasTail() {
+		return (getFlags() & 2) != 0;
+	}
+
+	public void setHasTail(boolean tail) {
+		byte f = getFlags();
+		setFlags(tail ? (byte)(f | 2) : (byte)(f & ~2));
+	}
+
+	public @Nullable String getOwnerUUID() {
+		return this.entityData.getString(DATA_OWNER_UUID);
+	}
+
+	public void setOwnerUUID(@Nullable String uuid) {
+		this.entityData.set(DATA_OWNER_UUID, uuid);
+	}
+
 	@Override
 	public int getMaxHealth() {
-		return 4;
+		return 6;
 	}
+
+
+
+
 	@Override
 	public boolean canSpawnHere() {
 		int x = MathHelper.floor(this.x);
 		int y = MathHelper.floor(this.bb.minY);
 		int z = MathHelper.floor(this.z);
-
 		int id = this.world.getBlockId(x, y - 1, z);
-
-		// Prevent spawning on air, water, lava
-		if (id == 0 || id == 8 || id == 9 || id == 10 || id == 11) {
-			return false;
-		}
-
-		// Allow spawning on any other block
-		return true;
+		return id != 0 && id != 8 && id != 9 && id != 10 && id != 11;
 	}
-	public boolean hasTail = true;
 
 	@Override
-	public boolean hurt(Entity attacker, int i, DamageType type) {
-		boolean result = super.hurt(attacker, i, type);
-		// Lose tail the first time it gets hurt
-		if (result && this.hasTail) {
-			this.hasTail = false;
-			this.dropItem(FunnyFaunaItems.FOOD_LIZARDTAIL.id, 1);
+	public boolean hurt(Entity attacker, int damage, DamageType type) {
+		boolean result = super.hurt(attacker, damage, type);
+
+		if (result && !world.isClientSide) {
+			if (hasTail()) {
+				setHasTail(false);
+				dropItem(FunnyFaunaItems.FOOD_LIZARDTAIL.id, 1);
+			}
+			this.setFleeTarget(attacker);
+			this.fleeTimer = 100;
 		}
 
 		return result;
 	}
+
 	@Override
-	public void onLivingUpdate() {
-		super.onLivingUpdate();
-		if (!this.hasTail && this.random.nextInt(1200) == 0) {
-			this.hasTail = true;
-		}
+	public void updateAI() {
+		if (world.isClientSide) return;
+
+		// Skip AI if riding a player
+		if (this.vehicle instanceof Player) return;
+
+		super.updateAI(); // run tasks only if not riding
 	}
-	@Override
-	protected void updateAI() {
-		super.updateAI();
-
-		// Reset target if current target is invalid
-		if (this.getTarget() != null) {
-			Entity target = this.getTarget();
-			if (target.isRemoved() || !target.onGround || target.isInWater() || target.isInLava()) {
-				this.setTarget(null);
-			}
-		}
-
-		// If no target, find nearby crickets
-		if (this.getTarget() == null) {
-			List<EntityCricket> nearbyCrickets = this.world.getEntitiesWithinAABB(
-				EntityCricket.class,
-				AABB.getTemporaryBB(this.x, this.y, this.z,
-						this.x + 1.0, this.y + 1.0, this.z + 1.0)
-					.grow(12.0, 4.0, 12.0) // 12 block radius
-			);
-
-			if (!nearbyCrickets.isEmpty()) {
-				// Pick a random cricket to chase
-				EntityCricket cricket = nearbyCrickets.get(this.random.nextInt(nearbyCrickets.size()));
-				this.setTarget(cricket);
-			}
-		}
-
-		// Chase target if exists
-		if (this.getTarget() != null && !this.hasPath()) {
-			Entity target = this.getTarget();
-			float distance = target.distanceTo(this);
-
-			// Teleport closer if too far (like wolf)
-			if (distance > 12.0F) {
-				int tx = MathHelper.floor(target.x);
-				int ty = MathHelper.floor(target.bb.minY);
-				int tz = MathHelper.floor(target.z);
-
-				for (int dx = -2; dx <= 2; dx++) {
-					for (int dz = -2; dz <= 2; dz++) {
-						if ((Math.abs(dx) > 1 || Math.abs(dz) > 1)
-							&& this.world.isBlockNormalCube(tx + dx, ty - 1, tz + dz)
-							&& !this.world.isBlockNormalCube(tx + dx, ty, tz + dz)
-							&& !this.world.isBlockNormalCube(tx + dx, ty + 1, tz + dz)) {
-
-							this.moveTo((tx + dx) + 0.5, ty, (tz + dz) + 0.5, this.yRot, this.xRot);
-							this.fallDistance = 0;
-							return;
-						}
-					}
-				}
-			} else {
-				// Otherwise, pathfind normally
-				Path path = this.world.getPathToEntity(this, target, 16.0F);
-				this.setPathToEntity(path);
-			}
-
-			// Direct movement if very close to cricket to avoid stopping early
-			if (target instanceof EntityCricket && distance < 3.0F) {
-				double dx = (target.x + target.bbWidth / 2) - this.x;
-				double dz = (target.z + target.bbWidth / 2) - this.z;
-				double dy = (target.y + target.bbHeight / 2) - this.y;
-
-				double total = MathHelper.sqrt(dx * dx + dz * dz);
-				if (total > 0.0) { // avoid divide by zero
-					this.xd = dx / total * 0.15 + this.xd * 0.2;
-					this.zd = dz / total * 0.15 + this.zd * 0.2;
-					this.yd = dy * 0.1; // optional: small vertical adjustment
-				}
-			}
-		}
-
-		// Attack/eat cricket if close
-		if (this.getTarget() instanceof EntityCricket) {
-			EntityCricket cricket = (EntityCricket) this.getTarget();
-			float distance = cricket.distanceTo(this);
-
-			if (distance < 2F && cricket.bb.maxY > this.bb.minY && cricket.bb.minY < this.bb.maxY) {
-				this.attackTime = 20;
-				cricket.remove(); // Eat the cricket
-				this.setTarget(null); // Stop chasing
-				this.heal(2); // Optional: regain health when eating
-			}
-		}
-	}
-
 
 	@Override
 	public void tick() {
+		// Yes, this is stupid. Yes, it fixes riding desync.
+		if (EnvironmentHelper.isServerEnvironment()
+			&& ridingCooldown-- <= 0
+			&& this.vehicle != null
+			&& !wasEjected) {
+
+
+			ridingCooldown = Global.TICKS_PER_SECOND * 2;
+
+			MinecraftServer.getInstance().playerList.sendPacketToPlayersAroundPoint(
+				this.x, this.y, this.z,
+				32,
+				this.world.dimension.id,
+				new PacketSetRiding(this, (Entity) this.vehicle)
+			);
+		}
+		if (this.vehicle == null) {
+			wasEjected = false;
+		}
+
+
 		super.tick();
 
-		// If we have a target and it's a cricket
-		Entity target = this.getTarget();
-		if (target instanceof EntityCricket) {
-			double dx = target.x - this.x;
-			double dy = target.y - this.y;
-			double dz = target.z - this.z;
-			double distance = Math.sqrt(dx*dx + dy*dy + dz*dz);
+		// Disable physics/collision when riding player's head
+		this.noPhysics = this.vehicle instanceof Player;
 
-			// If close enough, "eat" the cricket
-			if (distance < 1.5) { // tweak this radius as needed
-				target.outOfWorld(); // removes the cricket from the world
-				this.setTarget(null); // clear target so lizard can search for next cricket
-			}
+		if (this.vehicle instanceof Player) {
+			Player player = (Player) this.vehicle;
+			this.fallDistance = 0.0F;
 		}
 	}
+
 	@Override
-	public void addAdditionalSaveData(@NotNull CompoundTag tag) {
-		super.addAdditionalSaveData(tag);
-		tag.putBoolean("HasTail", this.hasTail);
+	public void causeFallDamage(float distance) {
+		// Don't take fall damage when riding a player
+		if (this.vehicle instanceof Player) {
+			return;
+		}
+		super.causeFallDamage(distance);
 	}
 
 	@Override
-	public void readAdditionalSaveData(@NotNull CompoundTag tag) {
-		super.readAdditionalSaveData(tag);
-		this.hasTail = tag.getBoolean("HasTail");
+	public boolean collidesWithBlock(net.minecraft.core.block.Block<?> block, int metadata) {
+		// No block collision when riding player
+		if (this.vehicle instanceof Player) {
+			return false;
+		}
+		return super.collidesWithBlock(block, metadata);
 	}
+
+	@Override
+	public boolean collidesWith(Entity entity) {
+		// No entity collision when riding player
+		if (this.vehicle instanceof Player) {
+			return false;
+		}
+		return super.collidesWith(entity);
+	}
+
+	@Override
+	public boolean isSelectable() {
+		// Can't select lizard when on player's head (unless sneaking)
+		if (this.vehicle instanceof Player && !((Player) this.vehicle).isSneaking()) {
+			return false;
+		}
+		return super.isSelectable();
+	}
+
+	@Override
+	public boolean isPickable() {
+		// Can't pick lizard when on player's head (unless sneaking)
+		if (this.vehicle instanceof Player && !((Player) this.vehicle).isSneaking()) {
+			return false;
+		}
+		return super.isPickable();
+	}
+
+	@Override
+	public boolean isPushable() {
+		// Can't push lizard when riding player
+		if (this.vehicle instanceof Player) {
+			return false;
+		}
+		return super.isPushable();
+	}
+
+	@Override
+	public void trySuffocate() {
+		// Don't suffocate in blocks when riding player
+		if (!(this.vehicle instanceof Player)) {
+			super.trySuffocate();
+		}
+	}
+
+	@Override
+	public double getRidingHeight() {
+		// Position on player's head
+		if (EnvironmentHelper.isClientWorld() && this.vehicle != Minecraft.getMinecraft().thePlayer) {
+			return this.heightOffset + 0.5F;
+		}
+		return this.heightOffset - 1.1f;
+	}
+
+	@Override
+	public void startRiding(IVehicle vehicle) {
+		super.startRiding(vehicle);
+		ridingCooldown = 20; // force near-immediate sync
+
+		if (EnvironmentHelper.isServerEnvironment()) {
+			MinecraftServer.getInstance().playerList.sendPacketToPlayersAroundPoint(
+				x, y, z, 32, world.dimension.id,
+				new PacketSetRiding(this, (Entity) this.vehicle)
+			);
+		}
+	}
+
+
+
+	@Override
+	public boolean interact(@NotNull Player player) {
+		ItemStack held = player.inventory.getCurrentItem();
+
+		// ---- Taming ----
+		if (!this.isTamed() && held != null && held.itemID == FunnyFaunaItems.JAR_CRICKET.id) {
+
+			// Consume the cricket jar
+			if (player.getGamemode().consumeBlocks()) {
+				held.consumeItem(player);
+				if (held.stackSize <= 0) {
+					player.inventory.setItem(player.inventory.getCurrentItemIndex(), null);
+				}
+			}
+
+			if (!this.world.isClientSide) {
+				if (this.random.nextInt(3) == 0) { // 33% tame chance
+					this.setTamed(true);
+					this.ownerUUID = player.uuid.toString();
+					this.setHealthRaw(this.getMaxHealth());
+
+					// Show hearts
+					this.showHeartsOrSmokeFX(true);
+					this.world.sendTrackedEntityStatusUpdatePacket(this, (byte)7);
+
+					// Play success sound
+					this.world.playSoundAtEntity(null, this, "random.orb", 1.0F, 1.2F);
+				} else {
+					// Show smoke on failure
+					this.showHeartsOrSmokeFX(false);
+					this.world.sendTrackedEntityStatusUpdatePacket(this, (byte)6);
+
+					// Play failure sound
+					this.world.playSoundAtEntity(null, this, "random.pop", 1.0F, 0.8F);
+				}
+			}
+
+			return true;
+		}
+
+		// ---- Head placement (only if tamed and owned by player) ----
+		if (this.isTamed() && this.ownerUUID != null && this.ownerUUID.equals(player.uuid.toString())) {
+			if (this.vehicle == null && !player.isSneaking()) {
+				// Mount on player's head
+				if (!this.world.isClientSide) {
+					this.startRiding(player);
+				}
+				return true;
+			} else if (this.vehicle == player) {
+				// Dismount from player's head
+				if (!this.world.isClientSide) {
+					player.ejectRider();
+				}
+				return true;
+			}
+		}
+
+		return super.interact(player);
+	}
+
+	// Add this helper method for showing hearts/smoke particles
+	private void showHeartsOrSmokeFX(boolean showHearts) {
+		String particle = showHearts ? "heart" : "smoke";
+
+		for (int i = 0; i < 7; i++) {
+			double motionX = this.random.nextGaussian() * 0.02;
+			double motionY = this.random.nextGaussian() * 0.02;
+			double motionZ = this.random.nextGaussian() * 0.02;
+
+			this.world.spawnParticle(
+				particle,
+				this.x + (this.random.nextFloat() * this.bbWidth * 2.0F) - this.bbWidth,
+				this.y + 0.5 + (this.random.nextFloat() * this.bbHeight),
+				this.z + (this.random.nextFloat() * this.bbWidth * 2.0F) - this.bbWidth,
+				motionX, motionY, motionZ, 0
+			);
+		}
+	}
+
+	// Add this to handle the particle event
+	@Override
+	public void handleEntityEvent(byte event, float attackedAtYaw) {
+		if (event == 7) {
+			this.showHeartsOrSmokeFX(true);
+		} else if (event == 6) {
+			this.showHeartsOrSmokeFX(false);
+		} else {
+			super.handleEntityEvent(event, attackedAtYaw);
+		}
+	}
+
+
+
+	@Override
+	public void onLivingUpdate() {
+		super.onLivingUpdate();
+
+		// Regrow tail occasionally
+		if (!this.hasTail() && this.random.nextInt(1200) == 0) {
+			this.setHasTail(true);
+		}
+
+
+	}
+	@Override
+	public void addAdditionalSaveData(CompoundTag tag) {
+		super.addAdditionalSaveData(tag);
+		tag.putBoolean("Tamed", isTamed());
+		if (ownerUUID != null) tag.putString("Owner", ownerUUID);
+	}
+
+	@Override
+	public void readAdditionalSaveData(CompoundTag tag) {
+		super.readAdditionalSaveData(tag);
+		setTamed(tag.getBoolean("Tamed"));
+		if (tag.containsKey("Owner")) ownerUUID = tag.getString("Owner");
+	}
+
+
+
 	@Override
 	public String getLivingSound() {
 		return "funnyfauna:mob.lizard.idle";
@@ -204,14 +394,19 @@ public class MobLizard extends MobAnimal {
 	@Override
 	public String getDeathSound() {
 		return "funnyfauna:mob.lizard.death";
-
 	}
 
-	public boolean isFavouriteItem(ItemStack itemStack) {
-		return itemStack != null && itemStack.getItem() == FunnyFaunaItems.JAR_CRICKET;
+	@Override
+	public int getFleeTimer() { return fleeTimer; }
+
+	@Override
+	public void setFleeTimer(int ticks) { this.fleeTimer = ticks; }
+
+	@Override
+	public Entity getFleeTarget() {
+		return fleeTarget;
 	}
 
-
-
-
+	@Override
+	public void setFleeTarget(Entity entity) { this.fleeTarget = entity; }
 }

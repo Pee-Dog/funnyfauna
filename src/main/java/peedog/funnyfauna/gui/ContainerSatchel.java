@@ -7,27 +7,42 @@ import net.minecraft.core.item.ItemStack;
 import net.minecraft.core.player.inventory.container.ContainerInventory;
 import net.minecraft.core.player.inventory.menu.MenuAbstract;
 import net.minecraft.core.player.inventory.slot.Slot;
-import peedog.funnyfauna.FunnyFaunaClient;
+import peedog.funnyfauna.item.ItemSatchel;
 
 import java.util.List;
 
 public class ContainerSatchel extends MenuAbstract {
 	public InventorySatchel inventorySatchel;
 
-	public ContainerSatchel(final ContainerInventory playerInv, final ItemStack satchel) {
+	public ContainerSatchel(ContainerInventory playerInv, ItemStack satchel) {
 		super();
 		this.inventorySatchel = new InventorySatchel(satchel);
-		final int slotsNum = this.inventorySatchel.getContainerSize();
-		final int rows = (int) Math.ceil(slotsNum / 9d);
-		for (int i = 0; i < rows; ++i) {
-			int width = 9;
-			if (i == rows - 1) {
-				width = slotsNum - 9 * i;
-			}
-			for (int k = 0; k < width; ++k) {
-				this.addSlot(new SlotSatchel(this.inventorySatchel, k + i * 9, 8 + k * 18, 18 + 18 * i));
+		this.refreshSlots();
+	}
+
+	public void refreshSlots() {
+		this.slots.clear();
+		this.lastSlots.clear();
+
+		int slotsNum = this.inventorySatchel.getContainerSize();
+		if (slotsNum > 0) { // only add satchel slots if any items exist
+			int rows = (int) Math.ceil(slotsNum / 9d);
+
+			for (int i = 0; i < rows; ++i) {
+				int width = (i == rows - 1) ? slotsNum - 9 * i : 9;
+				for (int k = 0; k < width; ++k) {
+					this.addSlot(new SlotSatchel(
+						this.inventorySatchel,
+						k + i * 9,
+						8 + k * 18,
+						18 + 18 * i
+					));
+				}
 			}
 		}
+
+		// Always add player inventory slots
+		ContainerInventory playerInv = Minecraft.getMinecraft().thePlayer.inventory;
 		for (int i = 0; i < 3; ++i) {
 			for (int k = 0; k < 9; ++k) {
 				this.addSlot(new Slot(playerInv, k + i * 9 + 9, 8 + k * 18, 84 + i * 18));
@@ -36,60 +51,135 @@ public class ContainerSatchel extends MenuAbstract {
 		for (int j = 0; j < 9; ++j) {
 			this.addSlot(new Slot(playerInv, j, 8 + j * 18, 142));
 		}
+
+		// Reassign GUI indices
+		for (int i = 0; i < this.slots.size(); i++) {
+			this.slots.get(i).index = i;
+		}
 	}
+
+
 	@Override
-	public List<Integer> getMoveSlots(final InventoryAction inventoryAction, final Slot slot, final int i, final Player entityPlayer) {
-		final int chestSize = this.inventorySatchel.getContainerSize();
-		if (slot.index >= 0 && slot.index < chestSize) {
-			return this.getSlots(0, chestSize, false);
-		}
-		if (inventoryAction == InventoryAction.MOVE_ALL) {
-			if (slot.index >= chestSize && slot.index < chestSize + 27) {
-				return this.getSlots(chestSize, 27, false);
+	public void handleItemMove(InventoryAction action, Slot slot, int target, Player player) {
+		ItemStack cursorStack = player.inventory.getHeldItemStack();
+
+		// Calculate moveAmount at the start so it's available everywhere
+		int moveAmount = (action == InventoryAction.CLICK_RIGHT || action == InventoryAction.MOVE_SINGLE_ITEM) ? 1 :
+			(cursorStack != null ? cursorStack.stackSize : 0);
+
+		// 1. CLICKING THE EMPTY BACKGROUND AREA (The "Click Anywhere" feature)
+		if (slot == null) {
+			if (cursorStack == null || cursorStack.getItem() instanceof ItemSatchel) return;
+
+			ItemStack toAdd = cursorStack.copy();
+			toAdd.stackSize = moveAmount;
+
+			int added = inventorySatchel.contents.add(toAdd);
+			if (added > 0) {
+				cursorStack.stackSize -= added;
+				if (cursorStack.stackSize <= 0) player.inventory.setHeldItemStack(null);
+
+				// CRITICAL: Call forceSync instead of just setChanged
+				this.forceSync();
 			}
-			if (slot.index >= chestSize + 27 && slot.index < chestSize + 36) {
-				return this.getSlots(chestSize + 27, 9, false);
-			}
-		} else if (slot.index >= chestSize && slot.index < chestSize + 36) {
-			return this.getSlots(chestSize, 36, false);
+			return;
 		}
-		return null;
+
+		// 2. CLICKING AN EXISTING ITEM IN THE SATCHEL
+		if (slot instanceof SlotSatchel) {
+			int satchelIndex = ((SlotSatchel) slot).getSatchelIndex();
+			ItemStack stackInSlot = inventorySatchel.getItem(satchelIndex);
+			if (stackInSlot == null) return;
+
+			// SHIFT-CLICK (Move item out of satchel into player inventory)
+			if (action == InventoryAction.MOVE_STACK || action == InventoryAction.MOVE_ALL) {
+				ItemStack toMove = stackInSlot.copy();
+				int playerInvStart = inventorySatchel.getContainerSize();
+
+				// BTA mergeItems returns void. We check if it worked by comparing sizes.
+				int originalSize = toMove.stackSize;
+				this.mergeItems(toMove, playerInvStart, playerInvStart + 36, false);
+
+				int movedCount = originalSize - toMove.stackSize;
+				if (movedCount > 0) {
+					inventorySatchel.removeItem(satchelIndex, movedCount);
+				}
+			}
+			// NORMAL CLICK
+			else {
+				if (cursorStack == null) {
+					// Right click = take half (rounded up), Left click = take all
+					int amountToTake = (action == InventoryAction.CLICK_RIGHT) ? (stackInSlot.stackSize + 1) / 2 : stackInSlot.stackSize;
+					ItemStack removed = inventorySatchel.removeItem(satchelIndex, amountToTake);
+					player.inventory.setHeldItemStack(removed);
+					inventorySatchel.setChanged();
+					refreshSlots();
+				} else {
+					// FIX: If holding an item, ALWAYS add it to the satchel (don't pick up slot item)
+					if (cursorStack.getItem() instanceof ItemSatchel) return;
+
+					int added = inventorySatchel.contents.add(cursorStack);
+					if (added > 0) {
+						cursorStack.stackSize -= added;
+						if (cursorStack.stackSize <= 0) player.inventory.setHeldItemStack(null);
+						inventorySatchel.setChanged();
+						refreshSlots();
+					}
+				}
+			}
+			return;
+		}
+
+		// 3. SHIFT-CLICKING FROM PLAYER INVENTORY INTO SATCHEL
+		if (action == InventoryAction.MOVE_STACK && !(slot instanceof SlotSatchel)) {
+			ItemStack toMove = slot.getItemStack();
+			if (toMove != null && !(toMove.getItem() instanceof ItemSatchel)) {
+				int added = inventorySatchel.contents.add(toMove);
+				if (added > 0) {
+					toMove.stackSize -= added;
+					if (toMove.stackSize <= 0) slot.set(null);
+					else slot.setChanged();
+
+					inventorySatchel.setChanged();
+					refreshSlots();
+				}
+			}
+		}
 	}
+
+
+	/**
+	 * Helper to get only the player inventory slot indices (0-35)
+	 */
 	@Override
-	public List<Integer> getTargetSlots(final InventoryAction inventoryAction, final Slot slot, final int i, final Player entityPlayer) {
-		final int chestSize = this.inventorySatchel.getContainerSize();
-		if (slot.index < chestSize) {
-			return this.getSlots(chestSize, 36, true);
+	public List<Integer> getMoveSlots(InventoryAction action, Slot slot, int target, Player player) {
+		int satchelSize = this.inventorySatchel.getContainerSize();
+		int playerInvSize = 36;
+
+		if (slot != null && slot.getContainer() instanceof InventorySatchel) {
+			return this.getSlots(satchelSize, playerInvSize, false);
+		} else {
+			return this.getSlots(0, satchelSize, false);
 		}
-		return this.getSlots(0, chestSize, false);
+	}
+
+
+
+	@Override
+	public List<Integer> getTargetSlots(InventoryAction action, Slot slot, int target, Player player) {
+		return this.getMoveSlots(action, slot, target, player);
 	}
 
 	@Override
-	public boolean stillValid(final Player entityPlayer) {
-		return this.inventorySatchel.stillValid(entityPlayer);
+	public boolean stillValid(Player player) {
+		return this.inventorySatchel.stillValid(player);
 	}
 
-	@Override
-	public ItemStack clicked(final InventoryAction action, final int[] args, final Player player) {
-		int slotId = this.inventorySatchel.getContainerSize() + player.inventory.getCurrentItemIndex() - 9;
-		if (player.inventory.getCurrentItemIndex() < 9) slotId = this.inventorySatchel.getContainerSize() + player.inventory.getCurrentItemIndex() + (9 * 3);
-		assert player.world != null;
-		if (args != null && args.length >= 1 && args[0] == slotId) {
-			if (player.world.isClientSide) {
-				Minecraft.getMinecraft().thePlayer.closeScreen();
-			}
-			return player.getHeldItem();
-		}
-		final ItemStack is = super.clicked(action, args, player);
-		if (player.world.isClientSide) {
-			this.inventorySatchel.setChanged();
-			FunnyFaunaClient.sendStackUpdate(this.inventorySatchel.stack.getData());
-			if (player.getHeldItem() == null) {
-				Minecraft.getMinecraft().thePlayer.closeScreen();
-				return is;
-			}
-			player.getHeldItem().setData(this.inventorySatchel.stack.getData());
-		}
-		return is;
+	public void forceSync() {
+		// This tells the container to rebuild its slot list based on the new inventory size
+		this.refreshSlots();
+
+		// This marks the container as changed so it sends packet updates to the client
+		this.inventorySatchel.setChanged();
 	}
 }

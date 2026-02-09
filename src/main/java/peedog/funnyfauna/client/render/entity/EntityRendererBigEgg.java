@@ -43,13 +43,14 @@ public class EntityRendererBigEgg extends EntityRenderer<ProjectileBigEgg> {
 		float scale = 0.0625F;
 		GL11.glScalef(scale, scale, scale);
 
-		// Cube bounds (same as addBox)
-		float x1 = -11.0F;
-		float x2 = -5.0F;
-		float y1 = -9.0F;
-		float y2 = 0.0F;
-		float z1 = 5.0F;
-		float z2 = 11.0F;
+		// Centered cube bounds (6 x 9 x 6)
+		float x1 = -3.0F;
+		float x2 =  3.0F;
+		float y1 = -4.5F;
+		float y2 =  4.5F;
+		float z1 = -3.0F;
+		float z2 =  3.0F;
+
 
 		float texW = 64.0F;
 		float texH = 32.0F;

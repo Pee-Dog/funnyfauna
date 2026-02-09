@@ -33,9 +33,9 @@ public class MobBoar extends MobAnimal {
 		setSize(0.9F, 0.9F);
 		this.textureIdentifier = NamespaceID.getPermanent("funnyfauna", "boar");
 		mobDrops.add(new WeightedRandomLootObject(Items.FOOD_PORKCHOP_RAW.getDefaultStack(), 0, 2));
-		mobDrops.add(new WeightedRandomLootObject(FunnyFaunaItems.COARSEHIDE.getDefaultStack(), 1, 4));
+		mobDrops.add(new WeightedRandomLootObject(FunnyFaunaItems.COARSEHIDE.getDefaultStack(), 1, 3));
 		burningMobDrops.add(new WeightedRandomLootObject(Items.FOOD_PORKCHOP_COOKED.getDefaultStack(), 1, 2));
-		burningMobDrops.add(new WeightedRandomLootObject(FunnyFaunaItems.COARSEHIDE.getDefaultStack(), 1, 4));
+		burningMobDrops.add(new WeightedRandomLootObject(FunnyFaunaItems.COARSEHIDE.getDefaultStack(), 1, 3));
 	}
 	@Override
 	public void tick() {

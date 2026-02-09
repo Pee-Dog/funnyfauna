@@ -5,7 +5,7 @@ import net.minecraft.client.render.model.ModelBase;
 import net.minecraft.client.render.tessellator.Tessellator;
 import peedog.funnyfauna.entity.lizard.MobLizard;
 
-public class MobRendererLizard extends MobRenderer<MobLizard> {
+public class  MobRendererLizard extends MobRenderer<MobLizard> {
 
 	public MobRendererLizard(ModelBase modelbase, float f) {
 		super(modelbase, f);

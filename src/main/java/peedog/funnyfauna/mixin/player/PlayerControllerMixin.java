@@ -11,6 +11,7 @@ import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 import peedog.funnyfauna.item.FunnyFaunaItems;
 import peedog.funnyfauna.item.ItemArmExtension;
+import peedog.funnyfauna.item.ItemToggleable;
 
 @Mixin(PlayerController.class)
 public abstract class PlayerControllerMixin {
@@ -60,11 +61,13 @@ public abstract class PlayerControllerMixin {
 
 		for (ItemStack stack : player.inventory.mainInventory) {
 			if (stack != null
-				&& stack.getItem() == FunnyFaunaItems.ARM_EXTENSION
-				&& ItemArmExtension.isExtended(stack)) {
+				&& stack.getItem() instanceof ItemArmExtension
+				&& ItemToggleable.isToggled(stack)) {
 				return true;
 			}
 		}
+
 		return false;
 	}
+
 }

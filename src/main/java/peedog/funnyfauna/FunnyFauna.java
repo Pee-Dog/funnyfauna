@@ -1,6 +1,7 @@
 package peedog.funnyfauna;
 
 import net.fabricmc.api.ModInitializer;
+import net.minecraft.client.gui.guidebook.mobs.MobInfoRegistry;
 import net.minecraft.core.block.entity.TileEntityDispatcher;
 import net.minecraft.core.entity.Entity;
 import net.minecraft.core.entity.SpawnListEntry;
@@ -9,6 +10,9 @@ import net.minecraft.core.entity.animal.MobCow;
 import net.minecraft.core.entity.animal.MobPig;
 import net.minecraft.core.entity.animal.MobSheep;
 import net.minecraft.core.enums.MobCategory;
+import net.minecraft.core.item.ItemStack;
+import net.minecraft.core.item.Items;
+import net.minecraft.core.sound.SoundTypes;
 import net.minecraft.core.util.collection.NamespaceID;
 import net.minecraft.core.world.World;
 import net.minecraft.core.world.biome.Biome;
@@ -17,14 +21,18 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import peedog.funnyfauna.block.FunnyFaunaBlocks;
 import peedog.funnyfauna.block.entity.TileEntityEmuEgg;
+import peedog.funnyfauna.block.entity.TileEntityJarCricket;
 import peedog.funnyfauna.entity.FunnyFaunaEntities;
 import peedog.funnyfauna.entity.armadillo.MobArmadillo;
+import peedog.funnyfauna.entity.bird.MobBird;
 import peedog.funnyfauna.entity.boar.MobBoar;
 import peedog.funnyfauna.entity.camel.MobCamel;
 import peedog.funnyfauna.entity.emu.MobEmu;
+import peedog.funnyfauna.entity.horse.MobHorse;
 import peedog.funnyfauna.entity.lizard.MobLizard;
 import peedog.funnyfauna.entity.penguin.MobPenguin;
 import peedog.funnyfauna.item.FunnyFaunaItems;
+import peedog.funnyfauna.net.message.EjectRiderNetworkMessage;
 import peedog.funnyfauna.net.message.FunnyRideableNetworkMessage;
 import turniplabs.halplibe.helper.network.NetworkHandler;
 import turniplabs.halplibe.util.ConfigHandler;
@@ -38,6 +46,7 @@ public class FunnyFauna implements ModInitializer, RecipeEntrypoint, GameStartEn
 	public static final Logger LOGGER = LoggerFactory.getLogger(MOD_ID);
 	public static int GUI_LABEL_COLOR = 0x404040;
 	public static int GUI_SATCHEL_ID;
+	public static int GUI_CAMEL_ID;
 	public static int itemid;
 
 	private static void removeVanillaPassives(Biome biome) {
@@ -59,6 +68,16 @@ public class FunnyFauna implements ModInitializer, RecipeEntrypoint, GameStartEn
 		GUI_SATCHEL_ID = config.getInt("gui_satchel_id");
 
 	}
+	static {
+		final Properties prop = new Properties();
+		prop.setProperty("gui_camel_id","10");
+		final ConfigHandler config = new ConfigHandler(MOD_ID, prop);
+
+		config.updateConfig();
+
+		GUI_CAMEL_ID = config.getInt("gui_camel_id");
+
+	}
 
 
 	@Override
@@ -67,6 +86,9 @@ public class FunnyFauna implements ModInitializer, RecipeEntrypoint, GameStartEn
 		new FunnyFaunaBlocks().initializeBlocks();
 		NamespaceID emuEggId = NamespaceID.getPermanent(MOD_ID, "emu_egg");
 		TileEntityDispatcher.addMapping(TileEntityEmuEgg.class, emuEggId);
+		NamespaceID jarCricketId = NamespaceID.getPermanent(MOD_ID, "jar_cricket");
+		TileEntityDispatcher.addMapping(TileEntityJarCricket.class, jarCricketId);
+
 		removeVanillaPassives(Biomes.OVERWORLD_TUNDRA);
 		removeVanillaPassives(Biomes.OVERWORLD_GLACIER);
 		removeVanillaPassives(Biomes.OVERWORLD_TAIGA);
@@ -93,7 +115,11 @@ public class FunnyFauna implements ModInitializer, RecipeEntrypoint, GameStartEn
 		Biomes.OVERWORLD_OUTBACK_GRASSY.getSpawnableList(MobCategory.creature).add(new SpawnListEntry(MobArmadillo.class, 10));
 		Biomes.OVERWORLD_CAATINGA.getSpawnableList(MobCategory.creature).add(new SpawnListEntry(MobBoar.class, 10));
 		Biomes.OVERWORLD_OUTBACK_GRASSY.getSpawnableList(MobCategory.creature).add(new SpawnListEntry(MobBoar.class, 10));
+		Biomes.OVERWORLD_GRASSLANDS.getSpawnableList(MobCategory.creature).add(new SpawnListEntry(MobHorse.class, 10));
+		Biomes.OVERWORLD_MEADOW.getSpawnableList(MobCategory.creature).add(new SpawnListEntry(MobHorse.class, 10));
+		Biomes.OVERWORLD_PLAINS.getSpawnableList(MobCategory.creature).add(new SpawnListEntry(MobHorse.class, 10));
 		NetworkHandler.registerNetworkMessage(FunnyRideableNetworkMessage::new);
+		NetworkHandler.registerNetworkMessage(EjectRiderNetworkMessage::new);
 		LOGGER.info("Funny Fauna initialized.");
 	}
 
@@ -106,6 +132,7 @@ public class FunnyFauna implements ModInitializer, RecipeEntrypoint, GameStartEn
 	@Override
 	public void beforeGameStart() {
 		FunnyFaunaEntities.init();
+		SoundTypes.loadSoundsJson(MOD_ID);
 	}
 
 

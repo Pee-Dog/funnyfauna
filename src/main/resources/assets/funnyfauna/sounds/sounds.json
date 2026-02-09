@@ -110,5 +110,49 @@
       "mob/armadillo/idle2.ogg",
       "mob/armadillo/idle3.ogg"
     ]
+  },
+  "mob.cricket.ambient": {
+    "subtitle": "subtitles.mob.cricket.ambient",
+    "sounds": [
+      "mob/cricket/ambient.ogg"
+    ]
+  },
+  "mob.bird.chickadee": {
+    "subtitle": "subtitles.mob.bird.chickadee",
+    "sounds": [
+      "mob/bird/chickadee1.ogg",
+      "mob/bird/chickadee2.ogg",
+      "mob/bird/chickadee3.ogg",
+      "mob/bird/chickadee4.ogg",
+      "mob/bird/chickadee5.ogg"
+    ]
+  },
+  "mob.bird.robin": {
+    "subtitle": "subtitles.mob.bird.robin",
+    "sounds": [
+      "mob/bird/robin_1.ogg",
+      "mob/bird/robin_2.ogg",
+      "mob/bird/robin_3.ogg",
+      "mob/bird/robin_4.ogg",
+      "mob/bird/robin_5.ogg"
+    ]
+  },
+  "mob.fox.idle": {
+    "subtitle": "subtitles.mob.fox.idle",
+    "sounds": [
+      "mob/fox/idle1.ogg",
+      "mob/fox/idle2.ogg",
+      "mob/fox/idle3.ogg",
+      "mob/fox/idle4.ogg",
+      "mob/fox/idle5.ogg"
+    ]
+  },
+  "mob.fox.hurt": {
+    "subtitle": "subtitles.mob.fox.hurt",
+    "sounds": [
+      "mob/fox/hurt1.ogg",
+      "mob/fox/hurt2.ogg",
+      "mob/fox/hurt3.ogg"
+    ]
   }
 }

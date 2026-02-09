@@ -1,19 +1,24 @@
 package peedog.funnyfauna.item;
 
 import net.minecraft.core.block.Block;
+import net.minecraft.core.block.entity.TileEntity;
 import net.minecraft.core.entity.Entity;
 import net.minecraft.core.entity.player.Player;
 import net.minecraft.core.item.ItemPlaceable;
 import net.minecraft.core.item.ItemStack;
+import net.minecraft.core.item.Items;
 import net.minecraft.core.util.helper.Side;
+import net.minecraft.core.util.phys.HitResult;
+import net.minecraft.core.util.phys.Vec3;
 import net.minecraft.core.world.World;
+import com.mojang.nbt.tags.CompoundTag;
+import peedog.funnyfauna.block.BlockLogicJarCricket;
+import peedog.funnyfauna.block.entity.TileEntityJarCricket;
+import peedog.funnyfauna.entity.cricket.EntityCricket;
 
 import java.util.function.BiFunction;
 import java.util.function.Supplier;
 
-/**
- * Generic jar item that can place a block and optionally release an entity when shift-right-clicked.
- */
 public class ItemJarAnimal extends ItemPlaceable {
 
 	private final Supplier<Block<?>> placedBlock;
@@ -26,7 +31,7 @@ public class ItemJarAnimal extends ItemPlaceable {
 		Supplier<Block<?>> placedBlock,
 		BiFunction<World, Player, Entity> entityFactory
 	) {
-		super(name, namespaceId, id, null); // lazy block assignment
+		super(name, namespaceId, id, null);
 		this.placedBlock = placedBlock;
 		this.entityFactory = entityFactory;
 		this.setMaxStackSize(1);
@@ -41,15 +46,66 @@ public class ItemJarAnimal extends ItemPlaceable {
 
 		if (!world.isClientSide) {
 			Entity entity = entityFactory.apply(world, player);
-			entity.setPos(player.x, player.y, player.z);
+
+			// Restore cricket color from NBT
+			if (entity instanceof EntityCricket
+				&& stack.getData() != null
+				&& stack.getData().containsKey("CricketColor")) {
+				((EntityCricket) entity).setColor(
+					stack.getData().getInteger("CricketColor")
+				);
+			}
+
+			// -------- Raytrace spawn position --------
+			double reach = 4.5;
+
+			Vec3 start = Vec3.getTempVec3(
+				player.x,
+				player.y + player.getHeadHeight(),
+				player.z
+			);
+
+			Vec3 look = player.getLookAngle();
+
+			Vec3 end = Vec3.getTempVec3(
+				start.x + look.x * reach,
+				start.y + look.y * reach,
+				start.z + look.z * reach
+			);
+
+			HitResult hit = world.checkBlockCollisionBetweenPoints(
+				start,
+				end,
+				false, // collide with fluids
+				false, // ignore non-colliders
+				false  // use selector boxes
+			);
+
+			double spawnX;
+			double spawnY;
+			double spawnZ;
+
+			if (hit != null) {
+				spawnX = hit.x + 0.5;
+				spawnY = hit.y + 0.05; // lift above surface
+				spawnZ = hit.z + 0.5;
+			} else {
+				// Fallback: spawn in front of player
+				spawnX = player.x + look.x * 2.0;
+				spawnY = player.y;
+				spawnZ = player.z + look.z * 2.0;
+			}
+
+			entity.setPos(spawnX, spawnY, spawnZ);
 			world.entityJoinedWorld(entity);
 
-			// Replace with empty jar item
-			return new ItemStack(net.minecraft.core.item.Items.JAR);
+			// Return empty jar
+			return new ItemStack(Items.JAR);
 		}
 
 		return stack;
 	}
+
 
 	/* =====================
 	   NORMAL RIGHT CLICK → PLACE BLOCK
@@ -58,29 +114,43 @@ public class ItemJarAnimal extends ItemPlaceable {
 	public boolean onUseItemOnBlock(ItemStack stack, Player player, World world,
 									int x, int y, int z, Side side,
 									double xPlaced, double yPlaced) {
-
-		if (player.isSneaking()) return false; // handled by onUseItem
-
-		Block<?> block = placedBlock.get();
-		if (block == null) return false; // safety check
-
-		// Calculate placement position
-		int placeX = x + side.getOffsetX();
-		int placeY = y + side.getOffsetY();
-		int placeZ = z + side.getOffsetZ();
-
-		if (!world.isAirBlock(placeX, placeY, placeZ)) return false;
-
-		// Place the block in the world
-		world.setBlockWithNotify(placeX, placeY, placeZ, block.id());
-		block.getLogic().onBlockPlacedByWorld(world, placeX, placeY, placeZ);
-
-		// Consume the jar
-		if (player.getGamemode().consumeBlocks()) {
-			player.swingItem();
-			player.getHeldItem().stackSize--;
-		}
-		world.playSoundAtEntity(player, player, "step.stone", 1.0F, 0.5F);
-		return true;
+		return false;
 	}
+//		if (player.isSneaking()) return false; // handled by onUseItem
+//
+//		Block<?> block = placedBlock.get();
+//		if (block == null) return false;
+//
+//		int placeX = x + side.getOffsetX();
+//		int placeY = y + side.getOffsetY();
+//		int placeZ = z + side.getOffsetZ();
+//
+//		if (!world.isAirBlock(placeX, placeY, placeZ)) return false;
+//
+//		// Place the block
+//		world.setBlockWithNotify(placeX, placeY, placeZ, block.id());
+//
+//		// Immediately create TileEntity and assign color
+//		if (!world.isClientSide && block.getLogic() instanceof BlockLogicJarCricket) {
+//			TileEntity te = world.getTileEntity(placeX, placeY, placeZ);
+//			if (te instanceof TileEntityJarCricket) {
+//				TileEntityJarCricket jarTe = (TileEntityJarCricket) te;
+//				if (stack.getData() != null && stack.getData().containsKey("CricketColor")) {
+//					jarTe.setCricketColor(stack.getData().getInteger("CricketColor"));
+//				}
+//			}
+//		}
+//
+//		// Notify block logic that it was placed
+//		block.getLogic().onBlockPlacedByWorld(world, placeX, placeY, placeZ);
+//
+//		if (player.getGamemode().consumeBlocks()) {
+//			player.swingItem();
+//			player.getHeldItem().stackSize--;
+//		}
+//
+//		world.playSoundAtEntity(player, player, "step.stone", 1.0F, 0.5F);
+//		return true;
+//	}
+
 }

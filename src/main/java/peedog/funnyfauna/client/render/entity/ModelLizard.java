@@ -61,7 +61,7 @@ public class ModelLizard extends ModelBase {
 		this.body.render(scale);
 
 		// ONLY render tail if it still exists
-		if (this.entity == null || this.entity.hasTail) {
+		if (this.entity == null || this.entity.hasTail()) {
 			this.tail.render(scale);
 		}
 

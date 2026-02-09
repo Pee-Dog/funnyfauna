@@ -64,18 +64,53 @@ public class MobEmu extends MobAnimal {
 
 	}
 
+	@Override
 	public void onLivingUpdate() {
 		super.onLivingUpdate();
-		int blockX = MathHelper.floor(this.x);
-		int blockY = MathHelper.floor(this.bb.minY);
-		int blockZ = MathHelper.floor(this.z);
-		if (!this.world.isClientSide && --this.eggTimer <= 0 && !(id == 0 || id == 8 || id == 9 || id == 10 || id == 11)) {
-			this.world.playSoundAtEntity((Entity)null, this, "mob.chickenplop", 1.0F, (this.random.nextFloat() - this.random.nextFloat()) * 0.2F + 1.0F);
-			this.eggTimer = this.random.nextInt(6000) + 6000;
-			this.world.setBlockWithNotify(blockX, blockY, blockZ, FunnyFaunaBlocks.EGG_EMU_BLOCK.id());
-		}
 
+		if (world.isClientSide) return; // only run on server
+
+		int blockX = MathHelper.floor(this.x);
+		int blockY = MathHelper.floor(this.bb.minY - 0.1); // block below emu
+		int blockZ = MathHelper.floor(this.z);
+
+		// Decrement egg timer
+		eggTimer--;
+
+		// Only lay egg if timer reaches 0
+		if (eggTimer <= 0) {
+			// Check block below
+			Block blockBelow = world.getBlock(blockX, blockY, blockZ);
+			int blockIdBelow = (blockBelow != null) ? blockBelow.id() : 0;
+
+			// Check egg placement spot (above the block)
+			int eggY = blockY + 1;
+			if (blockIdBelow != 0
+				&& blockIdBelow != Blocks.FLUID_WATER_STILL.id()
+				&& blockIdBelow != Blocks.FLUID_WATER_FLOWING.id()
+				&& blockIdBelow != Blocks.FLUID_LAVA_STILL.id()
+				&& blockIdBelow != Blocks.FLUID_LAVA_FLOWING.id()
+				&& world.isAirBlock(blockX, eggY, blockZ)) {
+
+				// Play egg-laying sound
+				world.playSoundAtEntity(
+					null,
+					this,
+					"mob.chickenplop",
+					1.0F,
+					(random.nextFloat() - random.nextFloat()) * 0.2F + 1.0F
+				);
+
+				// Place the egg
+				world.setBlockWithNotify(blockX, eggY, blockZ, FunnyFaunaBlocks.EGG_EMU_BLOCK.id());
+
+				// Reset egg timer
+				eggTimer = random.nextInt(6000) + 6000;
+			}
+		}
 	}
+
+
 	public boolean isFavouriteItem(ItemStack itemStack) {
 		return itemStack != null && itemStack.getItem().hasTag(ItemTags.CHICKENS_FAVOURITE_ITEM);
 	}

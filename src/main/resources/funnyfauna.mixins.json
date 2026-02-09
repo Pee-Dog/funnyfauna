@@ -11,7 +11,10 @@
     "player.PlayerControllerMixin",
     "WorldMixin",
     "ScreenContainerAbstractMixin",
-    "player.PlayerSturdyShellMixin"
+    "player.PlayerSturdyShellMixin",
+    "player.PlayerDropMixin",
+    "EntityRenderDispatcherMixin",
+    "MobMixin"
   ],
   "client": [
     "PacketHandlerClientMixin",

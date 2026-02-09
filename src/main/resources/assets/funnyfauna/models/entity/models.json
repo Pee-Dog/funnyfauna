@@ -3,7 +3,10 @@
     "/assets/funnyfauna/models/entity/horse.geo.json",
     "/assets/funnyfauna/models/entity/camel.geo.json",
     "/assets/funnyfauna/models/entity/armadillo.geo.json",
-    "/assets/funnyfauna/models/entity/boar.geo.json"
+    "/assets/funnyfauna/models/entity/boar.geo.json",
+    "/assets/funnyfauna/models/entity/bird.geo.json",
+    "/assets/funnyfauna/models/entity/fox.geo.json",
+    "/assets/funnyfauna/models/entity/mouse.geo.json"
   ],
   "renderers": {
     "funnyfauna:horse": {
@@ -17,6 +20,15 @@
     },
     "funnyfauna:boar": {
       "main": "geometry.boar"
+    },
+    "funnyfauna:bird": {
+      "main": "geometry.bird"
+    },
+    "funnyfauna:fox": {
+      "main": "geometry.fox"
+    },
+    "funnyfauna:mouse": {
+      "main": "geometry.mouse"
     }
   }
 }

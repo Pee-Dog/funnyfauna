@@ -1,7 +1,7 @@
-item.funnyfauna.food.lizardtail.name=Lizard Tail
+item.funnyfauna.food.lizardtail.name=Gecko Tail
 item.funnyfauna.food.lizardtail.desc=A small ration scared out of a lizard.
 item.funnyfauna.coarsehide.name=Coarse Hide
-item.funnyfauna.coarsehide.desc=A flat dry creature. Can be used to make pockets.
+item.funnyfauna.coarsehide.desc=A flat papery creature. Can be used to make pockets.
 item.funnyfauna.birdfoot.name=Bird Foot
 item.funnyfauna.birdfoot.desc=Stolen from an emu. Has excellent grip.
 item.funnyfauna.pocket.name=Pocket
@@ -9,5 +9,24 @@ item.funnyfauna.pocket.desc=Tiny little portable chest.
 item.funnyfauna.arm_extension.name=Arm Extension
 item.funnyfauna.arm_extension.desc=Increases arm length when active.
 item.funnyfauna.food.blubber.name=Blubber
-item.funnyfauna.food.blubber.desc=A small ration scared out of a lizard.
+item.funnyfauna.food.blubber.desc=A small ration from a penguin.
+item.funnyfauna.egg.emu.name=Big Egg
+item.funnyfauna.egg.emu.desc=A considerably large egg from an emu. Can be thrown to knock out opponents.
+item.funnyfauna.food.egg_emu.cooked.name=Cooked Big Egg
+item.funnyfauna.food.egg_emu.cooked.desc=A considerably large fried egg from an emu. Best eaten with bacon.
+item.funnyfauna.jar.cricket.name=Cricket Jar
+item.funnyfauna.jar.cricket.desc=A glass containing a cricket. Sings when placed in the dark!
+item.funnyfauna.scales.name=Scales
+item.funnyfauna.scales.desc=Skin from a reptile. Pick up with cursor and right click other item with scales to heal durability!
+item.funnyfauna.scales.reinforced.name=Reinforced Scales
+item.funnyfauna.scales.reinforced.desc=Fortified skin from a reptile. Pick up with cursor and right click other item with scales to heal durability!
+item.funnyfauna.scute.name=Scute
+item.funnyfauna.scute.desc=Shell piece from an armored critter. Can be crafted into sturdy shell.
+item.funnyfauna.sturdy.shell.name=Sturdy Shell
+item.funnyfauna.sturdy.shell.desc=Blocks some damage when crouching if active.
+item.funnyfauna.tumbleweed.name=Tumbleweed
+item.funnyfauna.tumbleweed.desc=A dried, withered, and BOUNCY plant! Can be used to breed camels.
+item.funnyfauna.climbing.claws.name=Climbing Claws
+item.funnyfauna.climbing.claws.desc=Allows climbing over any surface when activated. Easy to get up... harder to get down.
+
 

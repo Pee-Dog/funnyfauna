@@ -19,14 +19,31 @@ public abstract class PlayerLocalHandleFunnyRideableMixin extends Player {
 	protected PlayerLocalHandleFunnyRideableMixin(World world) {
 		super(world);
 	}
+
 	@Shadow
 	public PlayerInput input;
+
 	@Inject(method = "handleSpecialVehicleControl", at = @At("HEAD"))
 	private void handleFunnyRideableControl(CallbackInfo ci) {
-		if (vehicle instanceof FunnyRideable) {
-			((FunnyRideable) vehicle).controlEntity(input.moveForward, input.moveStrafe, isJumping, xRot, yRot);
-		} else if (passenger instanceof FunnyRideable) {
-			((FunnyRideable) passenger).controlEntity(input.moveForward, input.moveStrafe, isJumping, xRot, yRot);
+		// Only control the vehicle if it exists and is a FunnyRideable
+		if (vehicle != null && vehicle instanceof FunnyRideable) {
+			((FunnyRideable) vehicle).controlEntity(
+				input.moveForward,
+				input.moveStrafe,
+				isJumping,
+				xRot,
+				yRot
+			);
+		}
+		// If somehow the passenger itself is a FunnyRideable (rare case)
+		else if (passenger != null && passenger instanceof FunnyRideable) {
+			((FunnyRideable) passenger).controlEntity(
+				input.moveForward,
+				input.moveStrafe,
+				isJumping,
+				xRot,
+				yRot
+			);
 		}
 	}
 }

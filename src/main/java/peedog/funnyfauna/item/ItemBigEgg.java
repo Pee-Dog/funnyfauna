@@ -27,12 +27,41 @@ public class ItemBigEgg extends Item implements IDispensable {
 		return itemstack;
 	}
 
-	public void onUseByActivator(ItemStack itemStack, TileEntityActivator activatorBlock, World world, Random random, int blockX, int blockY, int blockZ, double offX, double offY, double offZ, Direction direction) {
-		ProjectileBigEgg projectileBigEgg = new ProjectileBigEgg(world, (double)blockX + offX, (double)blockY + offY, (double)blockZ + offZ);
-		projectileBigEgg.setHeading((double)direction.getOffsetX() * 0.6, direction.getOffsetY() == 0 ? 0.1 : (double)direction.getOffsetY() * 0.6, (double)((float)direction.getOffsetZ() * 0.6F), 1.1F, 6.0F);
-		world.entityJoinedWorld(projectileBigEgg);
+	@Override
+	public void onUseByActivator(
+		ItemStack itemStack,
+		TileEntityActivator activator,
+		World world,
+		Random random,
+		int blockX,
+		int blockY,
+		int blockZ,
+		double offX,
+		double offY,
+		double offZ,
+		Direction direction
+	) {
+		if (world.isClientSide) return;
+
+		ProjectileBigEgg egg = new ProjectileBigEgg(
+			world,
+			blockX + offX,
+			blockY + offY,
+			blockZ + offZ
+		);
+
+		egg.setHeading(
+			direction.getOffsetX() * 0.6,
+			direction.getOffsetY() == 0 ? 0.1 : direction.getOffsetY() * 0.6,
+			direction.getOffsetZ() * 0.6,
+			1.1F,
+			6.0F
+		);
+
+		world.entityJoinedWorld(egg);
 		--itemStack.stackSize;
 	}
+
 
 	public void onDispensed(ItemStack itemStack, World world, double x, double y, double z, int xOffset, int yOffset, int zOffset, Random random) {
 		ProjectileBigEgg projectileBigEgg = new ProjectileBigEgg(world, x, y, z);

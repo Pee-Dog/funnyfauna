@@ -3,6 +3,7 @@ package peedog.funnyfauna;
 import net.minecraft.client.render.EntityRenderDispatcher;
 import net.minecraft.client.render.TileEntityRenderDispatcher;
 import net.minecraft.client.render.block.color.BlockColorDispatcher;
+import net.minecraft.client.render.block.model.BlockModelCactus;
 import net.minecraft.client.render.block.model.BlockModelDispatcher;
 import net.minecraft.client.render.block.model.BlockModelJar;
 import net.minecraft.client.render.block.model.BlockModelStandard;
@@ -10,8 +11,10 @@ import net.minecraft.client.render.item.model.ItemModelDispatcher;
 import net.minecraft.client.render.item.model.ItemModelStandard;
 import net.minecraft.client.render.texture.stitcher.IconCoordinate;
 import net.minecraft.client.render.texture.stitcher.TextureRegistry;
+import net.minecraft.core.block.Blocks;
 import net.minecraft.core.entity.Entity;
 import net.minecraft.core.item.ItemStack;
+import net.minecraft.core.util.helper.Side;
 import org.useless.dragonfly.renderer.MobRenderer;
 import peedog.funnyfauna.block.BlockModelJarClosed;
 import peedog.funnyfauna.block.FunnyFaunaBlocks;
@@ -20,17 +23,23 @@ import peedog.funnyfauna.client.render.entity.*;
 import peedog.funnyfauna.client.render.tileentity.TileRendererEmuEgg;
 import peedog.funnyfauna.entity.ant.EntityAnt;
 import peedog.funnyfauna.entity.armadillo.MobArmadillo;
+import peedog.funnyfauna.entity.bird.MobBird;
 import peedog.funnyfauna.entity.boar.MobBoar;
 import peedog.funnyfauna.entity.camel.MobCamel;
 import peedog.funnyfauna.entity.cricket.EntityCricket;
 import peedog.funnyfauna.entity.emu.MobEmu;
+import peedog.funnyfauna.entity.fox.MobFox;
 import peedog.funnyfauna.entity.horse.MobHorse;
 import peedog.funnyfauna.client.render.entity.MobRendererHorse;
 import peedog.funnyfauna.entity.lizard.MobLizard;
+import peedog.funnyfauna.entity.mouse.MobMouse;
 import peedog.funnyfauna.entity.penguin.MobPenguin;
 import peedog.funnyfauna.entity.projectile.ProjectileBigEgg;
+import peedog.funnyfauna.entity.tumbleweed.EntityTumbleweed;
+import peedog.funnyfauna.entity.worm.EntityWorm;
 import peedog.funnyfauna.item.FunnyFaunaItems;
 import peedog.funnyfauna.item.ItemSturdyShell;
+import peedog.funnyfauna.item.ItemToggleable;
 import turniplabs.halplibe.helper.ModelHelper;
 import turniplabs.halplibe.util.ModelEntrypoint;
 
@@ -49,22 +58,27 @@ public class FunnyFaunaModels implements ModelEntrypoint {
 		dispatcher.addDispatch(new ItemModelStandard(FunnyFaunaItems.POCKET, null).setIcon("funnyfauna:item/pocket"));
 		dispatcher.addDispatch(new ItemModelStandard(FunnyFaunaItems.OIL, null).setIcon("funnyfauna:item/oil"));
 		dispatcher.addDispatch(new ItemModelStandard(FunnyFaunaItems.FOOD_BLUBBER, null).setIcon("funnyfauna:item/food_blubber"));
+		dispatcher.addDispatch(new ItemModelStandard(FunnyFaunaItems.FOOD_EGGEMU_COOKED, null).setIcon("funnyfauna:item/food_eggemu_cooked"));
 		dispatcher.addDispatch(new ItemModelStandard(FunnyFaunaItems.EGG_EMU, null).setIcon("funnyfauna:item/egg_emu"));
 		dispatcher.addDispatch(new ItemModelStandard(FunnyFaunaItems.JAR_CRICKET, null).setIcon("funnyfauna:item/jar_cricket"));
 		dispatcher.addDispatch(new ItemModelStandard(FunnyFaunaItems.SCALES, null).setIcon("funnyfauna:item/scales"));
+		dispatcher.addDispatch(new ItemModelStandard(FunnyFaunaItems.SCALES_REINFORCED, null).setIcon("funnyfauna:item/scales_reinforced"));
 		dispatcher.addDispatch(new ItemModelStandard(FunnyFaunaItems.SCUTE, null).setIcon("funnyfauna:item/scute"));
+		dispatcher.addDispatch(new ItemModelStandard(FunnyFaunaItems.TUMBLEWEED, null).setIcon("funnyfauna:item/tumbleweed"));
 		dispatcher.addDispatch(new ItemModelStandard(FunnyFaunaItems.ARM_EXTENSION, null) {
-		private final IconCoordinate OFF =
-			TextureRegistry.getTexture("funnyfauna:item/arm_extension_off");
+			private final IconCoordinate OFF =
+				TextureRegistry.getTexture("funnyfauna:item/arm_extension_off");
 
-		private final IconCoordinate ON =
-			TextureRegistry.getTexture("funnyfauna:item/arm_extension_on");
+			private final IconCoordinate ON =
+				TextureRegistry.getTexture("funnyfauna:item/arm_extension_on");
 
 			@Override
 			public IconCoordinate getIcon(Entity entity, ItemStack stack) {
-				return stack.getMetadata() == 1 ? ON : OFF;
+				// Use the common toggleable helper
+				return ItemToggleable.isToggled(stack) ? ON : OFF;
 			}
 		});
+
 		dispatcher.addDispatch(new ItemModelStandard(FunnyFaunaItems.STURDY_SHELL, null) {
 			private final IconCoordinate OFF =
 				TextureRegistry.getTexture("funnyfauna:item/sturdy_shell_off");
@@ -74,10 +88,22 @@ public class FunnyFaunaModels implements ModelEntrypoint {
 
 			@Override
 			public IconCoordinate getIcon(Entity entity, ItemStack stack) {
-				return ItemSturdyShell.isEnabled(stack) ? ON : OFF;
+				return ItemToggleable.isToggled(stack) ? ON : OFF;
 			}
 		});
+		dispatcher.addDispatch(new ItemModelStandard(FunnyFaunaItems.CLIMBING_CLAWS, null) {
+			private final IconCoordinate OFF =
+				TextureRegistry.getTexture("funnyfauna:item/climbing_claws_off");
 
+			private final IconCoordinate ON =
+				TextureRegistry.getTexture("funnyfauna:item/climbing_claws_on");
+
+			@Override
+			public IconCoordinate getIcon(Entity entity, ItemStack stack) {
+				// Use the common toggleable helper
+				return ItemToggleable.isToggled(stack) ? ON : OFF;
+			}
+		});
 
 	}
 
@@ -93,6 +119,11 @@ public class FunnyFaunaModels implements ModelEntrypoint {
 		ModelHelper.setEntityModel(ProjectileBigEgg.class, EntityRendererBigEgg::new);
 		ModelHelper.setEntityModel(EntityAnt.class, EntityRendererAnt::new);
 		ModelHelper.setEntityModel(EntityCricket.class, EntityRendererCricket::new);
+		ModelHelper.setEntityModel(EntityWorm.class, EntityRendererWorm::new);
+		ModelHelper.setEntityModel(EntityTumbleweed.class, EntityRendererTumbleweed::new);
+		ModelHelper.setEntityModel(MobBird.class, MobRendererBird::new);
+		ModelHelper.setEntityModel(MobFox.class, MobRendererFox::new);
+		ModelHelper.setEntityModel(MobMouse.class, MobRendererMouse::new);
 
 
 	}
