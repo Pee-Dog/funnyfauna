@@ -13,14 +13,18 @@ import peedog.funnyfauna.entity.ai.i.IFlyable;
 /**
  * Handles solo flight when a mob is specifically looking for a perch.
  * This is a focused flight mode where the mob searches for leaves or suitable perching spots.
+ * Uses vertical-first approach: rise to safe height, then move horizontally.
  */
 public class FlightSoloPerchTask<T extends MobTaskrunner & IFlyable> extends Task<T> {
-	private static final float PERCH_SEARCH_SPEED = 0.5F;
-	private static final int SEARCH_RADIUS = 8;
-	private static final int SEARCH_HEIGHT = 12;
+	private static final int SEARCH_RADIUS = 2;
+	private static final int SEARCH_HEIGHT = 8;
+	private static final double BIRD_HEIGHT = 0.5;
+	private static final double BUFFER = 0.2;
 
 	private ServerBlockPos3D perchTarget = null;
 	private int searchCooldown = 0;
+	private int headHitTicks = 0;
+	private static final int MAX_HEAD_HIT_TICKS = 40;
 
 	public FlightSoloPerchTask(T mob) {
 		super(mob);
@@ -30,37 +34,131 @@ public class FlightSoloPerchTask<T extends MobTaskrunner & IFlyable> extends Tas
 	protected void onStart() {
 		perchTarget = null;
 		searchCooldown = 0;
+		headHitTicks = 0;
 	}
 
 	@Override
 	protected Task onTick() {
+		// Handle ceiling collision
+		if (isHeadBlocked()) {
+			headHitTicks++;
+
+			if (mob.yd > 0) mob.yd = 0;
+
+			if (!trySlideToAir() || headHitTicks > MAX_HEAD_HIT_TICKS) {
+				// Abort perch attempt and land
+				abortPerchSeek();
+				return null;
+			}
+		} else {
+			headHitTicks = 0;
+		}
+
 		// Search for perch periodically
 		if (--searchCooldown <= 0) {
 			searchCooldown = 40; // Search every 2 seconds
-			perchTarget = findNearbyPerch();
+			if (perchTarget == null) {
+				perchTarget = findNearbyPerch();
+			}
 		}
 
 		if (perchTarget != null) {
-			// Move toward perch
+			// Move toward perch using vertical-first approach
 			moveTowardPerch();
 
 			// Check if we've reached the perch
 			if (isAtPerch()) {
 				// Successfully reached perch - land here
-				mob.setFlying(false);
-				if (mob instanceof IFlockable) {
-					((IFlockable) mob).setSoloFlying(false);
-				}
-				mob.setPerched(true);
-				mob.xd = mob.yd = mob.zd = 0;
+				completeLanding();
 				return null;
 			}
 		} else {
-			// No perch found - just fly around looking
+			// No perch found - wander while searching
 			wanderWhileSearching();
 		}
 
 		return null;
+	}
+
+	private void moveTowardPerch() {
+		double targetX = perchTarget.x + 0.5;
+		double targetZ = perchTarget.z + 0.5;
+
+		// Determine safe hover height: must be above any blocks above the perch
+		int perchX = MathHelper.floor(targetX);
+		int perchY = perchTarget.y;
+		int perchZ = MathHelper.floor(targetZ);
+
+		int safeY = perchY + 1; // base hover 1 block above leaf
+		while (!mob.world.isAirBlock(perchX, safeY, perchZ) && safeY < mob.world.getHeightBlocks()) {
+			safeY++; // rise until air
+		}
+
+		double targetY = safeY + BUFFER;
+
+		// VERTICAL-FIRST APPROACH:
+		// First, rise to targetY if not high enough
+		if (mob.y < targetY) {
+			mob.yd = Math.min(0.15, targetY - mob.y); // controlled ascent
+			mob.xd = 0;
+			mob.zd = 0;
+		} else {
+			// Horizontal motion once safely above perch
+			double dx = targetX - mob.x;
+			double dz = targetZ - mob.z;
+
+			mob.xd = dx * 0.1;
+			mob.zd = dz * 0.1;
+
+			// Clamp horizontal speed
+			double horizontalSpeed = Math.sqrt(mob.xd * mob.xd + mob.zd * mob.zd);
+			double maxSpeed = 0.1;
+			if (horizontalSpeed > maxSpeed) {
+				mob.xd = mob.xd / horizontalSpeed * maxSpeed;
+				mob.zd = mob.zd / horizontalSpeed * maxSpeed;
+			}
+
+			// Minor vertical adjustment
+			double dy = targetY - mob.y;
+			mob.yd = MathHelper.clamp(dy * 0.05, -0.05, 0.05);
+		}
+	}
+
+	private boolean isAtPerch() {
+		if (perchTarget == null) return false;
+
+		double targetX = perchTarget.x + 0.5;
+		double targetZ = perchTarget.z + 0.5;
+
+		int safeY = perchTarget.y + 1;
+		while (!mob.world.isAirBlock(perchTarget.x, safeY, perchTarget.z) && safeY < mob.world.getHeightBlocks()) {
+			safeY++;
+		}
+		double targetY = safeY + BUFFER;
+
+		double distXZ = Math.sqrt(Math.pow(targetX - mob.x, 2) + Math.pow(targetZ - mob.z, 2));
+		double distY = Math.abs(targetY - mob.y);
+
+		return distXZ < 0.15 && distY < 0.05;
+	}
+
+	private void completeLanding() {
+		mob.setFlying(false);
+		if (mob instanceof IFlockable) {
+			((IFlockable) mob).setSoloFlying(false);
+		}
+		mob.xd = mob.yd = mob.zd = 0;
+		perchTarget = null;
+	}
+
+	private void abortPerchSeek() {
+		if (mob instanceof IFlockable) {
+			((IFlockable) mob).setSoloFlying(false);
+		}
+		mob.setFlying(false);
+		mob.yd = -0.15;
+		headHitTicks = 0;
+		perchTarget = null;
 	}
 
 	private ServerBlockPos3D findNearbyPerch() {
@@ -80,25 +178,9 @@ public class FlightSoloPerchTask<T extends MobTaskrunner & IFlyable> extends Tas
 					if (id != 0) {
 						Block block = Blocks.blocksList[id];
 						if (block != null && block.getMaterial() == Material.leaves) {
-							// Found leaves! Check if there's air above to perch
-							if (mob.world.isAirBlock(checkX, checkY + 1, checkZ)) {
-								return new ServerBlockPos3D(checkX, checkY + 1, checkZ);
-							}
+							// Found leaves - return position on top
+							return new ServerBlockPos3D(checkX, checkY, checkZ);
 						}
-					}
-				}
-			}
-		}
-
-		// No leaves found - try any solid ground
-		for (int dy = -5; dy <= 5; dy++) {
-			int checkY = by + dy;
-			int id = mob.world.getBlockId(bx, checkY, bz);
-			if (id != 0) {
-				Block block = Blocks.blocksList[id];
-				if (block != null && block.isCubeShaped()) {
-					if (mob.world.isAirBlock(bx, checkY + 1, bz)) {
-						return new ServerBlockPos3D(bx, checkY + 1, bz);
 					}
 				}
 			}
@@ -107,56 +189,50 @@ public class FlightSoloPerchTask<T extends MobTaskrunner & IFlyable> extends Tas
 		return null;
 	}
 
-	private void moveTowardPerch() {
-		double dx = perchTarget.x + 0.5 - mob.x;
-		double dy = perchTarget.y - mob.y;
-		double dz = perchTarget.z + 0.5 - mob.z;
-
-		double horizontalDist = Math.sqrt(dx * dx + dz * dz);
-
-		if (horizontalDist > 0.01) {
-			// Move horizontally toward perch
-			double speed = PERCH_SEARCH_SPEED * 0.1;
-			mob.xd = (dx / horizontalDist) * speed;
-			mob.zd = (dz / horizontalDist) * speed;
-		}
-
-		// Move vertically toward perch
-		if (Math.abs(dy) > 0.5) {
-			mob.yd = MathHelper.clamp(dy * 0.1, -0.2, 0.2);
-		} else {
-			mob.yd = dy * 0.05;
-		}
-
-		// Face movement direction
-		mob.yRot = (float) (Math.atan2(mob.zd, mob.xd) * 180.0 / Math.PI) - 90.0F;
-	}
-
 	private void wanderWhileSearching() {
-		// Random wandering while searching for perch
-		mob.xd += (random.nextDouble() - 0.5) * 0.05;
-		mob.yd += (random.nextDouble() - 0.5) * 0.03;
-		mob.zd += (random.nextDouble() - 0.5) * 0.05;
+		// Gentle wandering while searching
+		mob.xd += (random.nextDouble() - 0.5) * 0.02;
+		mob.yd += (random.nextDouble() - 0.5) * 0.01;
+		mob.zd += (random.nextDouble() - 0.5) * 0.02;
 
 		// Damping
 		mob.xd *= 0.95;
 		mob.yd *= 0.95;
 		mob.zd *= 0.95;
-
-		// Update yaw
-		if (Math.abs(mob.xd) > 0.01 || Math.abs(mob.zd) > 0.01) {
-			mob.yRot = (float) (Math.atan2(mob.zd, mob.xd) * 180.0 / Math.PI) - 90.0F;
-		}
 	}
 
-	private boolean isAtPerch() {
-		if (perchTarget == null) return false;
+	private boolean isHeadBlocked() {
+		int headX = MathHelper.floor(mob.x);
+		int headY = MathHelper.floor(mob.y + mob.bbHeight + 0.1);
+		int headZ = MathHelper.floor(mob.z);
 
-		double dx = perchTarget.x + 0.5 - mob.x;
-		double dy = perchTarget.y - mob.y;
-		double dz = perchTarget.z + 0.5 - mob.z;
+		int id = mob.world.getBlockId(headX, headY, headZ);
+		if (id == 0) return false;
 
-		return Math.abs(dx) < 0.3 && Math.abs(dy) < 0.3 && Math.abs(dz) < 0.3;
+		Block block = Blocks.blocksList[id];
+		return block != null && block.isCubeShaped();
+	}
+
+	private boolean trySlideToAir() {
+		double[][] offsets = {
+			{ 0.4,  0.0},
+			{-0.4,  0.0},
+			{ 0.0,  0.4},
+			{ 0.0, -0.4}
+		};
+
+		for (double[] o : offsets) {
+			int ax = MathHelper.floor(mob.x + o[0]);
+			int ay = MathHelper.floor(mob.y + mob.bbHeight + 0.1);
+			int az = MathHelper.floor(mob.z + o[1]);
+
+			if (mob.world.isAirBlock(ax, ay, az)) {
+				mob.xd += o[0] * 0.2;
+				mob.zd += o[1] * 0.2;
+				return true;
+			}
+		}
+		return false;
 	}
 
 	@Override

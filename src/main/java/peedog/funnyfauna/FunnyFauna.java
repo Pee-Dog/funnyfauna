@@ -20,6 +20,7 @@ import net.minecraft.core.world.biome.Biomes;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import peedog.funnyfauna.block.FunnyFaunaBlocks;
+import peedog.funnyfauna.block.entity.TileEntityAntHill;
 import peedog.funnyfauna.block.entity.TileEntityEmuEgg;
 import peedog.funnyfauna.block.entity.TileEntityJarCricket;
 import peedog.funnyfauna.entity.FunnyFaunaEntities;
@@ -47,6 +48,7 @@ public class FunnyFauna implements ModInitializer, RecipeEntrypoint, GameStartEn
 	public static int GUI_LABEL_COLOR = 0x404040;
 	public static int GUI_SATCHEL_ID;
 	public static int GUI_CAMEL_ID;
+	public static int SCREEN_ANTHILL_ID;
 	public static int itemid;
 
 	private static void removeVanillaPassives(Biome biome) {
@@ -78,6 +80,16 @@ public class FunnyFauna implements ModInitializer, RecipeEntrypoint, GameStartEn
 		GUI_CAMEL_ID = config.getInt("gui_camel_id");
 
 	}
+	static {
+		final Properties prop = new Properties();
+		prop.setProperty("screen_anthill_id","10");
+		final ConfigHandler config = new ConfigHandler(MOD_ID, prop);
+
+		config.updateConfig();
+
+		SCREEN_ANTHILL_ID = config.getInt("screen_anthill_id");
+
+	}
 
 
 	@Override
@@ -88,6 +100,8 @@ public class FunnyFauna implements ModInitializer, RecipeEntrypoint, GameStartEn
 		TileEntityDispatcher.addMapping(TileEntityEmuEgg.class, emuEggId);
 		NamespaceID jarCricketId = NamespaceID.getPermanent(MOD_ID, "jar_cricket");
 		TileEntityDispatcher.addMapping(TileEntityJarCricket.class, jarCricketId);
+		NamespaceID antHillId = NamespaceID.getPermanent(MOD_ID, "ant_hill");
+		TileEntityDispatcher.addMapping(TileEntityAntHill.class, antHillId);
 
 		removeVanillaPassives(Biomes.OVERWORLD_TUNDRA);
 		removeVanillaPassives(Biomes.OVERWORLD_GLACIER);

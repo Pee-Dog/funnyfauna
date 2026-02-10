@@ -1,339 +1,236 @@
 package peedog.funnyfauna.entity.ant;
 
+import com.mojang.nbt.tags.CompoundTag;
 import net.minecraft.core.entity.Entity;
-import net.minecraft.core.entity.Mob;
+import net.minecraft.core.item.ItemStack;
+import net.minecraft.core.util.helper.DamageType;
 import net.minecraft.core.util.helper.MathHelper;
 import net.minecraft.core.world.World;
-import org.apache.commons.lang3.tuple.Pair;
-import org.jspecify.annotations.Nullable;
-import org.lwjgl.util.vector.Vector3f;
-import peedog.funnyfauna.entity.ant.util.*;
+import peedog.funnyfauna.entity.MobTaskrunner;
+import peedog.funnyfauna.entity.ai.PheromoneManager;
+import peedog.funnyfauna.entity.ai.Task;
+import peedog.funnyfauna.entity.ai.controllers.AntTask;
+import peedog.funnyfauna.entity.ai.i.IHomeable;
+import peedog.funnyfauna.entity.ai.i.IItemHolder;
 
-import java.util.List;
+public class EntityAnt extends MobTaskrunner implements IHomeable, IItemHolder {
 
-/**
- * IMPROVED VERSION - Fixed wall crawling behavior
- *
- * Key improvements:
- * 1. Collision-aware surface detection
- * 2. Better priority logic that doesn't force ants to ground
- * 3. Stronger sticking force for wall climbing
- * 4. Smoother transitions between surfaces
- */
-public class EntityAnt extends Mob implements IAdvancedPathFindingEntity, IClimberEntity {
+	// Data Watcher ID for climbing state (Byte)
+	private static final int DATA_CLIMBING = 16;
+	private static final int DATA_HELD_ITEM = 20;
 
-	/* ===================== Climbing State ===================== */
-
-	private Orientation orientation = Orientation.ground();
-	private Orientation renderOrientation;
-	private Vector3f attachedNormal = new Vector3f(0, 1, 0);
-	private boolean isClimbing = false;
-
-	private final SurfaceDetector surfaceDetector;
-	private final ClimbingPhysics climbingPhysics;
-
-	/* ===================== Config ===================== */
-
-	private boolean canClimbInWater = false;
-	private boolean canClimbInLava = false;
-	private float collisionInclusionRange = 0.5f;
-	private float collisionSmoothingRange = 0.1f;
-
-	/* ===================== AI ===================== */
-
-	private int wanderCooldown = 0;
-	private double targetX, targetY, targetZ;
-	private boolean hasTarget = false;
-	private int stuckTicks = 0;
-
-	/* ===================== Debug ===================== */
-
-	private int ticksSinceLastSurfaceChange = 0;
-	private Vector3f lastNormal = new Vector3f(0, 1, 0);
+	public int homeX = -1;
+	public int homeY = -1;
+	public int homeZ = -1;
+	public boolean hasHome = false;
+	private boolean initializedHome = false; // Track if home has been set
 
 	public EntityAnt(World world) {
 		super(world);
-		this.setSize(0.2F, 0.2F);
-		this.moveSpeed = 0.15f;
-		this.heartsHalvesLife = 4;
-		this.surfaceDetector = new SurfaceDetector(this, this, world);
-		this.climbingPhysics = new ClimbingPhysics(this, this);
+		this.setSize(0.25F, 0.25F); // Standard small bug size
+		this.footSize = 1F; // Allows stepping up full blocks automatically
+		this.moveSpeed = 0.25F;
+		this.heartsHalvesLife = 10;
+
+		// Set initial home if spawning naturally
+		if (!world.isClientSide) {
+			setHomeToCurrentPosition();
+		}
 	}
 
-	/* ===================== Core Movement ===================== */
+	@Override
+	public void defineSynchedData() {
+		super.defineSynchedData();
+		this.entityData.define(DATA_CLIMBING, (byte)0, Byte.class);
+		this.entityData.define(DATA_HELD_ITEM, null, ItemStack.class);
+	}
 
 	@Override
-	public void moveEntityWithHeading(float strafe, float forward) {
-		updateClimbingState();
+	public Task<EntityAnt> createTask() {
+		return new AntTask(this);
+	}
 
-		// 1. Add movement intent ONLY
-		if (isClimbing) {
-			climbingPhysics.addMovementForce(forward, strafe, orientation);
+	@Override
+	public void tick() {
+		super.tick();
+
+		if (!this.world.isClientSide) {
+			// Initialize home on first tick if not already set
+			if (!initializedHome && this.tickCount > 5) {
+				setHomeToCurrentPosition();
+				initializedHome = true;
+			}
+
+			// 1. Handle Wall Climbing Physics
+			this.setBesideClimbableBlock(this.horizontalCollision);
+
+			// 2. Leave Pheromone Trail ONLY when carrying item back to home
+			if (this.getHeldItem() != null && this.tickCount % 10 == 0) {
+				PheromoneManager.addScent(
+					MathHelper.floor(this.x),
+					MathHelper.floor(this.y),
+					MathHelper.floor(this.z)
+				);
+			}
+		}
+	}
+
+	// Method to set home to current position
+	private void setHomeToCurrentPosition() {
+		if (!this.hasHome) {
+			this.homeX = MathHelper.floor(this.x);
+			this.homeY = MathHelper.floor(this.y);
+			this.homeZ = MathHelper.floor(this.z);
+			this.hasHome = true;
+		}
+	}
+
+	// --- Climbing Logic (Spider Style) ---
+	@Override
+	public boolean canClimb() {
+		return this.isBesideClimbableBlock();
+	}
+
+	public boolean isBesideClimbableBlock() {
+		return (this.entityData.getByte(DATA_CLIMBING) & 1) != 0;
+	}
+
+	public void setBesideClimbableBlock(boolean climbing) {
+		byte b0 = this.entityData.getByte(DATA_CLIMBING);
+		if (climbing) {
+			b0 = (byte)(b0 | 1);
 		} else {
-			super.moveEntityWithHeading(strafe, forward);
-			return;
+			b0 = (byte)(b0 & -2);
 		}
-
-		// 2. Apply physics (projection, adhesion, friction, speed cap)
-		climbingPhysics.applyPhysics(orientation, isClimbing);
-
-		// 3. Move entity using resulting velocity
-		move(xd, yd, zd);
-
-		// 4. Final damping
-		xd *= 0.91;
-		yd *= 0.91;
-		zd *= 0.91;
-
-		fallDistance = 0;
+		this.entityData.set(DATA_CLIMBING, b0);
 	}
 
 	@Override
-	public void moveRelative(float strafe, float forward, float speed) {
-		if (!isClimbing) {
-			super.moveRelative(strafe, forward, speed);
-			return;
+	public void moveEntityWithHeading(float moveStrafing, float moveForward) {
+		super.moveEntityWithHeading(moveStrafing, moveForward);
+
+		if (this.isBesideClimbableBlock() && (this.horizontalCollision || !this.onGround)) {
+			if (moveForward > 0.0) {
+				this.yd = 0.2; // Climb speed
+			} else {
+				this.yd = 0.0; // Hold position
+			}
+			this.xd *= 0.8;
+			this.zd *= 0.8;
 		}
-
-		float mag = MathHelper.sqrt_float(strafe * strafe + forward * forward);
-		if (mag < 0.001f) return;
-
-		mag = speed / Math.max(1.0f, mag);
-		strafe *= mag;
-		forward *= mag;
-
-		xd += orientation.localX.x * strafe + orientation.localZ.x * forward;
-		yd += orientation.localX.y * strafe + orientation.localZ.y * forward;
-		zd += orientation.localX.z * strafe + orientation.localZ.z * forward;
 	}
 
-	/* ===================== Surface Detection - IMPROVED ===================== */
-
-	/**
-	 * IMPROVED VERSION - Uses collision information for better wall detection
-	 */
-	private void updateClimbingState() {
-		// Check what we're actually touching (collision-based)
-		boolean touchingWall = horizontalCollision || verticalCollision;
-		boolean touchingFloor = onGround;
-
-		// Detect nearby surfaces
-		SurfaceDetector.SurfaceInfo current = surfaceDetector.detectSurface();
-
-		// Special handling if we just collided with something
-
-		// NEW PRIORITY SYSTEM - doesn't force back to ground when climbing
-
-		// Priority 1: If touching a wall AND we detected a wall surface, climb it
-		if (touchingWall && current != null && Math.abs(current.normal.y) < 0.9f) {
-			attachTo(current.normal);
-			onGround = false;
-			return;
-		}
-
-		// Priority 2: If on ground AND detected ground surface below us
-		if (touchingFloor && current != null && current.normal.y > 0.7f) {
-			attachTo(current.normal);
-			int feetBlockY = (int) Math.floor(y) - 1;
-			// Only snap if close
-			if (Math.abs(y - (feetBlockY + 1.0)) < 0.3) {
-				y = feetBlockY + 1.0;
-			}
-			onGround = true;
-			return;
-		}
-
-		// Priority 3: Use whatever surface we detected (may be transitioning)
-		if (current != null) {
-			attachTo(current.normal);
-			onGround = current.normal.y > 0.7f;
-
-			// Snap if close to a horizontal surface
-			if (onGround && current.distance < 0.3f) {
-				y = current.blockY + 1.0;
-			}
-			return;
-		}
-
-		// Priority 4: Look ahead for surfaces to climb onto
-		double oldX = x, oldY = y, oldZ = z;
-		float lookAhead = 0.8f; // Increased look-ahead distance
-		x += orientation.localZ.x * lookAhead;
-		y += orientation.localZ.y * lookAhead;
-		z += orientation.localZ.z * lookAhead;
-		SurfaceDetector.SurfaceInfo ahead = surfaceDetector.detectSurface();
-		x = oldX; y = oldY; z = oldZ;
-
-		if (ahead != null) {
-			attachTo(ahead.normal);
-			onGround = ahead.normal.y > 0.7f;
-
-			// Snap to horizontal surfaces ahead
-			if (ahead.normal.y > 0.7f && ahead.distance < 0.5f) {
-				y = ahead.blockY + 1.0;
-			}
-			return;
-		}
-
-		// Priority 5: Check above for ceilings
-		y += 0.5f;
-		SurfaceDetector.SurfaceInfo above = surfaceDetector.detectSurface();
-		y = oldY;
-
-		if (above != null && above.normal.y < -0.5f) {
-			attachTo(above.normal);
-			onGround = false;
-			return;
-		}
-
-		// Priority 6: No surface found - fall
-		detach();
+	@Override
+	public boolean hasHome() {
+		return this.hasHome;
 	}
 
-	/* ===================== Climbing Physics ===================== */
+	public void setHome(int x, int y, int z) {
+		this.homeX = x;
+		this.homeY = y;
+		this.homeZ = z;
+		this.hasHome = true;
+		this.initializedHome = true;
+	}
 
-	private void attachTo(Vector3f normal) {
-		// Track if surface changed for debugging
-		float normalDiff = Math.abs(normal.x - lastNormal.x) +
-			Math.abs(normal.y - lastNormal.y) +
-			Math.abs(normal.z - lastNormal.z);
+	@Override
+	public int getHomeX() {
+		return this.homeX;
+	}
 
-		if (normalDiff > 0.1f) {
-			ticksSinceLastSurfaceChange = 0;
-			lastNormal.set(normal);
+	@Override
+	public int getHomeY() {
+		return this.homeY;
+	}
+
+	@Override
+	public int getHomeZ() {
+		return this.homeZ;
+	}
+
+	@Override
+	public ItemStack getHeldItem() {
+		ItemStack stack = this.entityData.getItemStack(DATA_HELD_ITEM);
+		return stack;
+	}
+
+	@Override
+	public void setHeldItem(ItemStack stack) {
+		if (stack == null) {
+			this.entityData.set(DATA_HELD_ITEM, null);
 		} else {
-			ticksSinceLastSurfaceChange++;
+			this.entityData.set(DATA_HELD_ITEM, stack);
 		}
-
-		isClimbing = true;
-		attachedNormal.set(normal);
-		orientation = Orientation.fromNormal(normal);
 	}
 
-	private void detach() {
-		isClimbing = false;
-		attachedNormal.set(0, 1, 0);
-		orientation = Orientation.ground();
-		onGround = false;
+	public double getDistanceToHomeSq(double x, double y, double z) {
+		if (!hasHome) return Double.MAX_VALUE;
+		double dx = this.homeX + 0.5 - x;
+		double dy = this.homeY + 0.5 - y;
+		double dz = this.homeZ + 0.5 - z;
+		return dx * dx + dy * dy + dz * dz;
 	}
 
-	/* ===================== AI ===================== */
+	public double getDistanceToHomeSq() {
+		return getDistanceToHomeSq(this.x, this.y, this.z);
+	}
 
 	@Override
-	protected void updateAI() {
-		super.updateAI();
+	public void addAdditionalSaveData(CompoundTag tag) {
+		super.addAdditionalSaveData(tag);
+		tag.putInt("age", this.time);
 
-		// Pick a new target if needed
-		if (!hasTarget || wanderCooldown-- <= 0) {
-			targetX = x + (random.nextDouble() - 0.5) * 8;
-			targetY = y + (random.nextDouble() - 0.5) * 4;
-			targetZ = z + (random.nextDouble() - 0.5) * 8;
-			wanderCooldown = 40 + random.nextInt(60);
-			hasTarget = true;
+		// Save home
+		tag.putInt("homeX", this.homeX);
+		tag.putInt("homeY", this.homeY);
+		tag.putInt("homeZ", this.homeZ);
+		tag.putBoolean("hasHome", this.hasHome);
+
+		// Save held item
+		ItemStack held = this.getHeldItem();
+		if (held != null && held.stackSize > 0) {
+			CompoundTag itemTag = new CompoundTag();
+			held.writeToNBT(itemTag);
+			tag.putCompound("HeldItem", itemTag);
 		}
-
-		if (!hasTarget) return;
-
-		// Direction to target
-		Vector3f toTarget = new Vector3f(
-			(float)(targetX - x),
-			(float)(targetY - y),
-			(float)(targetZ - z)
-		);
-		float len = (float)Math.sqrt(toTarget.x*toTarget.x + toTarget.y*toTarget.y + toTarget.z*toTarget.z);
-
-		if (len < 0.5f) {
-			hasTarget = false;
-			moveForward = 0;
-			moveStrafing = 0;
-			return;
-		}
-
-		toTarget.x /= len;
-		toTarget.y /= len;
-		toTarget.z /= len;
-
-		// Compute movement axes based on current surface
-		Vector3f normal = attachedNormal;
-		Vector3f forward;
-		Vector3f right;
-
-		if (Math.abs(normal.y) < 0.7f) {
-			// WALL: Forward = up the wall
-			Vector3f worldUp = new Vector3f(0, 1, 0);
-			float dot = worldUp.x * normal.x + worldUp.y * normal.y + worldUp.z * normal.z;
-			forward = new Vector3f(
-				worldUp.x - dot * normal.x,
-				worldUp.y - dot * normal.y,
-				worldUp.z - dot * normal.z
-			);
-			if (forward.length() < 0.001f) {
-				forward = new Vector3f(0, 1, 0);
-			}
-			forward.normalise();
-
-			right = Vector3f.cross(normal, forward, null);
-			right.normalise();
-		} else {
-			// GROUND: Forward = horizontal forward
-			Vector3f worldForward = new Vector3f(0, 0, 1);
-			float dot = worldForward.x * normal.x + worldForward.y * normal.y + worldForward.z * normal.z;
-			forward = new Vector3f(
-				worldForward.x - dot * normal.x,
-				worldForward.y - dot * normal.y,
-				worldForward.z - dot * normal.z
-			);
-			if (forward.length() < 0.001f) {
-				forward = new Vector3f(1, 0, 0);
-			}
-			forward.normalise();
-
-			right = Vector3f.cross(normal, forward, null);
-			right.normalise();
-		}
-
-		// Project target direction onto surface plane
-		float fwd = toTarget.x*forward.x + toTarget.y*forward.y + toTarget.z*forward.z;
-		float str = toTarget.x*right.x   + toTarget.y*right.y   + toTarget.z*right.z;
-
-		moveForward  = MathHelper.clamp(fwd, -1.0f, 1.0f);
-		moveStrafing = MathHelper.clamp(str, -1.0f, 1.0f);
 	}
-
-	/* ===================== Interfaces ===================== */
-
-	@Override public Orientation getOrientation() { return orientation; }
-	@Override public void setRenderOrientation(Orientation o) { renderOrientation = o; }
-	@Nullable @Override public Orientation getRenderOrientation() { return renderOrientation; }
-	@Override public float getMovementSpeed() { return 0.15f; }
 
 	@Override
-	public Pair<Integer, Vector3f> getGroundDirection() {
-		Vector3f n = attachedNormal;
-		if (Math.abs(n.y) > Math.abs(n.x) && Math.abs(n.y) > Math.abs(n.z))
-			return Pair.of(n.y > 0 ? 1 : 0, new Vector3f());
-		if (Math.abs(n.z) > Math.abs(n.x))
-			return Pair.of(n.z > 0 ? 3 : 2, new Vector3f());
-		return Pair.of(n.x > 0 ? 5 : 4, new Vector3f());
+	public void readAdditionalSaveData(CompoundTag tag) {
+		super.readAdditionalSaveData(tag);
+		this.time = tag.getInteger("age");
+
+		// Load home
+		if (tag.containsKey("homeX")) {
+			this.homeX = tag.getInteger("homeX");
+			this.homeY = tag.getInteger("homeY");
+			this.homeZ = tag.getInteger("homeZ");
+			this.hasHome = tag.getBoolean("hasHome");
+			this.initializedHome = true;
+		}
+
+		// Load held item
+		if (tag.containsKey("HeldItem")) {
+			CompoundTag itemTag = tag.getCompound("HeldItem");
+			ItemStack stack = ItemStack.readItemStackFromNbt(itemTag);
+			this.setHeldItem(stack);
+		}
 	}
 
-	@Override public boolean canClimbOnBlock(int id, int x, int y, int z) { return id != 0; }
+	// --- Standard Properties ---
+	@Override
+	public int getMaxHealth() {
+		return 8;
+	}
 
 	@Override
-	public float getBlockSlipperiness(int x, int y, int z) {
-		// IMPROVED: Less friction when climbing walls for better movement
-		return isClimbing && Math.abs(attachedNormal.y) < 0.7f ? 0.94f : 0.87f;
+	public boolean collidesWith(Entity entity) {
+		return false;
 	}
 
-	@Override public boolean canClimberTriggerWalking() { return true; }
-	@Override public boolean canClimbInWater() { return canClimbInWater; }
-	@Override public boolean canClimbInLava() { return canClimbInLava; }
-	@Override public float getCollisionsInclusionRange() { return collisionInclusionRange; }
-	@Override public float getCollisionsSmoothingRange() { return collisionSmoothingRange; }
-
-	@Override public int getMaxHealth() { return 4; }
-	@Override public int getAmbientSoundInterval() { return 160; }
-	@Override public boolean collidesWith(Entity entity) {return false;}
+	@Override
+	public void spawnInit() {
+	}
 
 	public int getAnimFrame() {
 		double motion = Math.abs(this.xd) + Math.abs(this.yd) + Math.abs(this.zd);
@@ -347,10 +244,18 @@ public class EntityAnt extends Mob implements IAdvancedPathFindingEntity, IClimb
 			: "funnyfauna:entity/ant/bug2";
 	}
 
-	/**
-	 * Debug method - check if ant is stuck
-	 */
-	public boolean isStableOnSurface() {
-		return ticksSinceLastSurfaceChange > 10;
+	@Override
+	public String getLivingSound() {
+		return null;
+	}
+
+	@Override
+	public String getHurtSound() {
+		return "random.hurt";
+	}
+
+	@Override
+	public String getDeathSound() {
+		return "random.hurt";
 	}
 }

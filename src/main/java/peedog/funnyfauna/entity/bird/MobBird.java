@@ -18,13 +18,13 @@ import peedog.funnyfauna.block.ServerBlockPos3D;
 import peedog.funnyfauna.entity.MobTaskrunner;
 import peedog.funnyfauna.entity.ai.Task;
 import peedog.funnyfauna.entity.ai.controllers.BirdTask;
-import peedog.funnyfauna.entity.ai.i.IFleeable;
 import peedog.funnyfauna.entity.ai.i.IFlockable;
 import peedog.funnyfauna.entity.ai.i.IFlyable;
+import peedog.funnyfauna.entity.ai.i.IHomeable;
 
 import java.util.List;
 
-public class MobBird extends MobTaskrunner implements IFleeable, IFlyable, IFlockable {
+public class MobBird extends MobTaskrunner implements IFlyable, IFlockable, IHomeable {
 
 	private static final int DATA_FLAGS = 16;
 	private static final int DATA_SKIN_VARIANT = 17;
@@ -49,10 +49,6 @@ public class MobBird extends MobTaskrunner implements IFleeable, IFlyable, IFloc
 
 	// Fed state
 	public boolean isFed = false;
-
-	// Flee state (from IFleeable)
-	private int fleeTimer = 0;
-	private Entity fleeTarget;
 
 	// Sound
 	private int ambientSoundTimer;
@@ -179,26 +175,9 @@ public class MobBird extends MobTaskrunner implements IFleeable, IFlyable, IFloc
 		this.flapping = flapping;
 	}
 
-	// ==================== IFLEEABLE IMPLEMENTATION ====================
-
 	@Override
-	public int getFleeTimer() {
-		return fleeTimer;
-	}
+	public void setLandingSize(boolean landing) {
 
-	@Override
-	public void setFleeTimer(int ticks) {
-		this.fleeTimer = ticks;
-	}
-
-	@Override
-	public Entity getFleeTarget() {
-		return fleeTarget;
-	}
-
-	@Override
-	public void setFleeTarget(Entity entity) {
-		this.fleeTarget = entity;
 	}
 
 	// ==================== IFLOCKABLE IMPLEMENTATION ====================
@@ -235,6 +214,32 @@ public class MobBird extends MobTaskrunner implements IFleeable, IFlyable, IFloc
 	// ==================== ADDITIONAL BEHAVIOR ====================
 
 	@Override
+	public boolean hasHome() {
+		return false;
+	}
+
+	@Override
+	public void setHome(int x, int y, int z) {
+
+	}
+
+	public int getHomeX() {
+		return 0;}
+
+	@Override
+	public int getHomeY() {
+		return 0;
+	}
+
+	public int getHomeZ() {return 0;}
+
+	@Override
+	public double getDistanceToHomeSq(double x, double y, double z) {
+		return 0;
+	}
+
+
+	@Override
 	public void tick() {
 		super.tick();
 
@@ -256,6 +261,12 @@ public class MobBird extends MobTaskrunner implements IFleeable, IFlyable, IFloc
 	@Override
 	public void updateAI() {
 		super.updateAI();
+
+		// Update home position when grounded
+		if ((onGround || isPerched()) && !isFlying()) {
+			homeX = x;
+			homeZ = z;
+		}
 
 		// Check for nearby threats (player sprinting, low health)
 		checkForThreats();
@@ -287,6 +298,8 @@ public class MobBird extends MobTaskrunner implements IFleeable, IFlyable, IFloc
 			AABB.getTemporaryBB(x, y, z, x + 1, y + 1, z + 1).grow(8, 6, 8)
 		);
 
+		boolean spookedThisTick = false;
+
 		for (Entity entity : nearbyLiving) {
 			if (entity == this) continue;
 
@@ -307,11 +320,7 @@ public class MobBird extends MobTaskrunner implements IFleeable, IFlyable, IFloc
 
 					// Full spook if sprinting
 					if (player.isSprinting() && distSqr <= 64.0) {
-						setFleeTarget(player);
-						setFleeTimer(100);
-
-						// Alert flock to take flight
-						alertFlockToFlee();
+						spookedThisTick = true;
 					}
 				}
 			} else if (!(entity instanceof MobBird) && !isFed) {
@@ -327,6 +336,26 @@ public class MobBird extends MobTaskrunner implements IFleeable, IFlyable, IFloc
 					yd = 0.25 + random.nextDouble() * 0.1;
 				}
 			}
+		}
+
+		// Handle spook response
+		if (spookedThisTick) {
+			// If perched, break perch and take flight
+			if (isPerched()) {
+				setPerched(false);
+				setFlying(true);
+				setFlightTime(0);
+				setGroundY(getGroundHeightAt(x, y, z));
+			}
+			// If on ground, take flight immediately
+			else if (!isFlying()) {
+				setFlying(true);
+				setFlightTime(0);
+				setGroundY(getGroundHeightAt(x, y, z));
+				// Alert flock to take flight too
+				alertFlockToFlee();
+			}
+			// If already flying, just continue flying (no special flee behavior needed)
 		}
 	}
 
@@ -352,10 +381,24 @@ public class MobBird extends MobTaskrunner implements IFleeable, IFlyable, IFloc
 			if (isStandingOnLeaves() || isNight()) {
 				setPerched(true);
 			}
+
+			// Occasionally look for leaves to perch on
+			if (!isPerched() && random.nextInt(200) == 0) {
+				ServerBlockPos3D leaves = findNearbyLeavesAbove(8, 2);
+				if (leaves != null) {
+					// Start solo perch-seeking flight
+					setSoloFlying(true);
+					setFlying(true);
+					setFlightTime(0);
+					yd = 0.15; // Initial upward boost
+					xd = 0;
+					zd = 0;
+				}
+			}
 		}
 
 		// Check flock takeoff
-		if (!isFlying() && !soloPerchingFlight && !isNight()) {
+		if (!isFlying() && !isSoloFlying() && !isNight()) {
 			List<MobBird> nearbyBirds = world.getEntitiesWithinAABB(
 				MobBird.class,
 				AABB.getTemporaryBB(x, y, z, x + 1, y + 1, z + 1).grow(8, 4, 8)
@@ -364,7 +407,7 @@ public class MobBird extends MobTaskrunner implements IFleeable, IFlyable, IFloc
 			for (MobBird bird : nearbyBirds) {
 				if (bird != this
 					&& bird.isFlying()
-					&& !bird.soloPerchingFlight
+					&& !bird.isSoloFlying()
 					&& bird.getSkinVariant() == this.getSkinVariant()) {
 
 					// Join the flock!
@@ -382,6 +425,27 @@ public class MobBird extends MobTaskrunner implements IFleeable, IFlyable, IFloc
 				setGroundY(getGroundHeightAt(x, y, z));
 			}
 		}
+	}
+
+	private ServerBlockPos3D findNearbyLeavesAbove(int maxUp, int radius) {
+		int bx = MathHelper.floor(x);
+		int by = MathHelper.floor(y);
+		int bz = MathHelper.floor(z);
+
+		for (int dy = 1; dy <= maxUp; dy++) {
+			for (int dx = -radius; dx <= radius; dx++) {
+				for (int dz = -radius; dz <= radius; dz++) {
+					int id = world.getBlockId(bx + dx, by + dy, bz + dz);
+					if (id != 0) {
+						Block block = Blocks.blocksList[id];
+						if (block != null && block.getMaterial() == Material.leaves) {
+							return new ServerBlockPos3D(bx + dx, by + dy, bz + dz);
+						}
+					}
+				}
+			}
+		}
+		return null;
 	}
 
 	private boolean isStandingOnLeaves() {
@@ -421,20 +485,6 @@ public class MobBird extends MobTaskrunner implements IFleeable, IFlyable, IFloc
 		}
 		return by + 1.0;
 	}
-
-	public void setLandingSize(boolean landing) {
-		if (landing) {
-			setSize(0.5F, 0.5F);
-		} else {
-			if (isFlying() && !isSoloFlying()) {
-				setSize(1.5F, 1.5F);
-			} else {
-				setSize(0.5F, 0.5F);
-			}
-		}
-		setPos(x, y, z); // refresh AABB
-	}
-
 
 	// ==================== OVERRIDES ====================
 

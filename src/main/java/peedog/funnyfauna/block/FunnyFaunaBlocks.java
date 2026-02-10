@@ -35,6 +35,7 @@ public final class FunnyFaunaBlocks implements BlockInitEntrypoint {
 			.setBlockSound(BlockSounds.SAND)
 			.setHardness(0.2f)
 			.setResistance(0.2f)
+			.setTicking(true)
 			.build("ant.hill", "ant_hill", blockID++,BlockLogicAntHill::new);
 		JAR_CRICKET = new BlockBuilder(MOD_ID)
 			.setBlockSound(BlockSounds.GLASS)
