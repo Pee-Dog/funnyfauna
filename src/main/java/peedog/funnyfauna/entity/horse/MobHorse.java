@@ -14,11 +14,13 @@ import net.minecraft.core.net.packet.PacketSetRiding;
 import net.minecraft.core.util.collection.NamespaceID;
 import net.minecraft.core.util.helper.DamageType;
 import net.minecraft.core.util.helper.MathHelper;
+import net.minecraft.core.world.IVehicle;
 import net.minecraft.core.world.World;
 import net.minecraft.server.MinecraftServer;
 import peedog.funnyfauna.entity.MobFunnyRideable;
 import peedog.funnyfauna.item.FunnyFaunaItems;
 import peedog.funnyfauna.net.message.EjectRiderNetworkMessage;
+import turniplabs.halplibe.helper.EnvironmentHelper;
 import turniplabs.halplibe.helper.network.NetworkHandler;
 
 import java.util.List;
@@ -54,7 +56,7 @@ public class MobHorse extends MobFunnyRideable {
 	public int customMaxHealth = 20;
 
 	// --- Wild spawn ranges ---
-	public final float WILD_MIN_SPEED_BPS = 4f;
+	public final float WILD_MIN_SPEED_BPS = 6f;
 	public final float WILD_MAX_SPEED_BPS = 9f;
 	public final float WILD_MIN_JUMP  = 1.25f;
 	public final float WILD_MAX_JUMP  = 2.0f;
@@ -62,11 +64,6 @@ public class MobHorse extends MobFunnyRideable {
 	// --- Absolute breeding caps ---
 	public final float MAX_SPEED_BPS = 12f;
 	public final float MAX_JUMP  = 3.0f;
-
-	// --- Texture variants ---
-	public int skinVariant;   // 0-9
-	public int bodyVariant;   // 0-4 (-1 = none)
-	public int legsVariant;   // 0-2 (-1 = none)
 
 	private final Random rand = new Random();
 	private final float gravity = 0.08f;
@@ -76,7 +73,7 @@ public class MobHorse extends MobFunnyRideable {
 		super(world);
 		this.textureIdentifier = NamespaceID.getPermanent("funnyfauna", "horse");
 		this.setSize(1F, 1.8F);
-		this.rideFootSize = 1.5f;
+		this.rideFootSize = 1f;
 		this.mobDrops.add(new WeightedRandomLootObject(
 			Items.LEATHER.getDefaultStack(), 2, 5
 		));
@@ -296,19 +293,35 @@ public class MobHorse extends MobFunnyRideable {
 		if (!(passenger instanceof Player)) return;
 
 		Player player = (Player) passenger;
+
+		// Server-side authoritative eject
 		this.ejectRider();
 
-		if (!world.isClientSide) {
-			// Send packet to sync riding state with clients
-			// Assuming you have the same networking system as camels
+		// Client-side sync
+		if (EnvironmentHelper.isServerEnvironment()) {
 			NetworkHandler.sendToAllAround(
 				this.x, this.y, this.z, 32, this.world.dimension.id,
-				new EjectRiderNetworkMessage(this)
+				new EjectRiderNetworkMessage(this) // <-- VEHICLE
 			);
 
 			MinecraftServer.getInstance().playerList.sendPacketToPlayersAroundPoint(
 				x, y, z, 32, this.world.dimension.id,
 				new PacketSetRiding(this, null)
+			);
+		}
+	}
+
+	@Override
+	public void startRiding(IVehicle vehicle) {
+		super.startRiding(vehicle);
+
+		// Reset sync cooldown for immediate sync
+
+		// Send riding packet on server
+		if (EnvironmentHelper.isServerEnvironment() && this.passenger != null) {
+			MinecraftServer.getInstance().playerList.sendPacketToPlayersAroundPoint(
+				x, y, z, 32, this.world.dimension.id,
+				new PacketSetRiding(this, this.passenger)
 			);
 		}
 	}

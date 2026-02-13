@@ -2,22 +2,19 @@ package peedog.funnyfauna.entity.ai.controllers;
 
 import net.minecraft.core.entity.EntityItem;
 import net.minecraft.core.entity.player.Player;
-import peedog.funnyfauna.entity.ai.SeekSeedTask;
+import peedog.funnyfauna.entity.ai.path.SeekSeedTask;
 import peedog.funnyfauna.entity.ai.Task;
 import peedog.funnyfauna.entity.ai.compound.IdleTask;
-import peedog.funnyfauna.entity.ai.flight.FlightTask;
-import peedog.funnyfauna.entity.ai.flight.PerchTask;
+import peedog.funnyfauna.entity.ai.path.flight.FlightTask;
 import peedog.funnyfauna.entity.bird.MobBird;
 
 public class BirdTask extends Task<MobBird> {
-	private final PerchTask<MobBird> perchTask;
 	private final SeekSeedTask<MobBird> seekSeedTask;
 	private final FlightTask<MobBird> flightTask;
 	private final IdleTask<MobBird> idleTask;
 
 	public BirdTask(MobBird mob) {
 		super(mob);
-		this.perchTask = new PerchTask<>(mob);
 		// Custom SeekSeedTask that marks bird as fed
 		this.seekSeedTask = new SeekSeedTask<MobBird>(mob) {
 			@Override
@@ -39,9 +36,10 @@ public class BirdTask extends Task<MobBird> {
 			return null;
 		}
 
-		// Priority 1: Perching (frozen state)
+		// Priority 1: Perching
 		if (mob.isPerched()) {
-			return perchTask;
+			idleTask.shouldWander = false;
+			return idleTask;
 		}
 
 		// Priority 2: Flying (birds flee by flying, so flight handles all aerial behavior)
@@ -58,6 +56,11 @@ public class BirdTask extends Task<MobBird> {
 		// Priority 4: Idle behavior (wandering, looking around)
 		idleTask.shouldWander = true;
 		return idleTask;
+	}
+
+	private boolean isNight() {
+		long time = mob.world.getWorldTime() % 24000;
+		return time >= 12500 && time <= 23500;
 	}
 
 	@Override

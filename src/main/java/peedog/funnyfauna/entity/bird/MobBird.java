@@ -5,11 +5,9 @@ import net.minecraft.core.block.Block;
 import net.minecraft.core.block.Blocks;
 import net.minecraft.core.block.material.Material;
 import net.minecraft.core.entity.Entity;
-import net.minecraft.core.entity.EntityItem;
 import net.minecraft.core.entity.player.Player;
-import net.minecraft.core.item.ItemSeeds;
-import net.minecraft.core.item.ItemStack;
 import net.minecraft.core.util.collection.NamespaceID;
+import net.minecraft.core.util.helper.DamageType;
 import net.minecraft.core.util.helper.MathHelper;
 import net.minecraft.core.util.phys.AABB;
 import net.minecraft.core.world.World;
@@ -18,9 +16,9 @@ import peedog.funnyfauna.block.ServerBlockPos3D;
 import peedog.funnyfauna.entity.MobTaskrunner;
 import peedog.funnyfauna.entity.ai.Task;
 import peedog.funnyfauna.entity.ai.controllers.BirdTask;
-import peedog.funnyfauna.entity.ai.i.IFlockable;
-import peedog.funnyfauna.entity.ai.i.IFlyable;
-import peedog.funnyfauna.entity.ai.i.IHomeable;
+import peedog.funnyfauna.entity.ai.interfaces.IFlockable;
+import peedog.funnyfauna.entity.ai.interfaces.IFlyable;
+import peedog.funnyfauna.entity.ai.interfaces.IHomeable;
 
 import java.util.List;
 
@@ -65,7 +63,7 @@ public class MobBird extends MobTaskrunner implements IFlyable, IFlockable, IHom
 	public void defineSynchedData() {
 		super.defineSynchedData();
 		this.entityData.define(DATA_FLAGS, (byte) 0, Byte.class);
-		this.entityData.define(DATA_SKIN_VARIANT, random.nextInt(2), Integer.class);
+		this.entityData.define(DATA_SKIN_VARIANT, random.nextInt(3), Integer.class);
 	}
 
 	@Override
@@ -177,7 +175,14 @@ public class MobBird extends MobTaskrunner implements IFlyable, IFlockable, IHom
 
 	@Override
 	public void setLandingSize(boolean landing) {
-
+		// Actually change size when landing starts so they don't look giant on approach
+		if (landing) {
+			setSize(0.5F, 0.5F);
+		} else {
+			// Re-evaluate based on current state
+			setFlying(isFlying());
+		}
+		setPos(x, y, z); // Refresh bounding box
 	}
 
 	// ==================== IFLOCKABLE IMPLEMENTATION ====================
@@ -203,7 +208,7 @@ public class MobBird extends MobTaskrunner implements IFlyable, IFlockable, IHom
 	// ==================== SKIN VARIANT ====================
 
 	public void setSkinVariant(int variant) {
-		variant = Math.max(0, Math.min(1, variant));
+		variant = Math.max(0, Math.min(2, variant));
 		this.entityData.set(DATA_SKIN_VARIANT, variant);
 	}
 
@@ -251,9 +256,9 @@ public class MobBird extends MobTaskrunner implements IFlyable, IFlockable, IHom
 
 		// Handle ambient sounds
 		if (!world.isClientSide) {
-			if (ambientSoundTimer-- <= 0) {
+			if (ambientSoundTimer-- <= 0 && !isNight()) {
 				playBirdSound();
-				ambientSoundTimer = 200 + random.nextInt(200);
+				ambientSoundTimer = 300 + random.nextInt(200);
 			}
 		}
 	}
@@ -273,6 +278,10 @@ public class MobBird extends MobTaskrunner implements IFlyable, IFlockable, IHom
 
 		// Check if should enter perch mode (on leaves or at night)
 		checkPerchConditions();
+
+		if (onGround && random.nextInt(50) == 0) {
+			yd = 0.3;
+		}
 	}
 
 	private void updateWingAnimation() {
@@ -340,23 +349,28 @@ public class MobBird extends MobTaskrunner implements IFlyable, IFlockable, IHom
 
 		// Handle spook response
 		if (spookedThisTick) {
-			// If perched, break perch and take flight
-			if (isPerched()) {
-				setPerched(false);
-				setFlying(true);
-				setFlightTime(0);
-				setGroundY(getGroundHeightAt(x, y, z));
-			}
-			// If on ground, take flight immediately
-			else if (!isFlying()) {
-				setFlying(true);
-				setFlightTime(0);
-				setGroundY(getGroundHeightAt(x, y, z));
-				// Alert flock to take flight too
-				alertFlockToFlee();
-			}
-			// If already flying, just continue flying (no special flee behavior needed)
+			spookBird();
 		}
+	}
+
+	// Fix Issue 7: Extract spook logic for reuse in hurt()
+	private void spookBird() {
+		// If perched, break perch and take flight
+		if (isPerched()) {
+			setPerched(false);
+			setFlying(true);
+			setFlightTime(0);
+			setGroundY(getGroundHeightAt(x, y, z));
+		}
+		// If on ground, take flight immediately
+		else if (!isFlying()) {
+			setFlying(true);
+			setFlightTime(0);
+			setGroundY(getGroundHeightAt(x, y, z));
+			// Alert flock to take flight too
+			alertFlockToFlee();
+		}
+		// If already flying, just continue flying (no special flee behavior needed)
 	}
 
 	private void alertFlockToFlee() {
@@ -377,6 +391,7 @@ public class MobBird extends MobTaskrunner implements IFlyable, IFlockable, IHom
 	}
 
 	private void checkPerchConditions() {
+		// Fix Issue 6: Don't perch in air at night - land first
 		if (!isFlying()) {
 			if (isStandingOnLeaves() || isNight()) {
 				setPerched(true);
@@ -395,6 +410,17 @@ public class MobBird extends MobTaskrunner implements IFlyable, IFlockable, IHom
 					zd = 0;
 				}
 			}
+			// Unperch at daybreak
+			if (isPerched() && !isNight() && !isStandingOnLeaves()) {
+				setPerched(false);
+			}
+
+		} else {
+			// Fix Issue 6: If flying at night, initiate landing instead of perching in air
+			if (isNight() && !isLanding() && !isSoloFlying()) {
+				// Don't set perched - let the bird land naturally via FlightTask
+				// The FlightTask will handle the landing
+			}
 		}
 
 		// Check flock takeoff
@@ -408,6 +434,7 @@ public class MobBird extends MobTaskrunner implements IFlyable, IFlockable, IHom
 				if (bird != this
 					&& bird.isFlying()
 					&& !bird.isSoloFlying()
+					&& !bird.isLanding()  // FIX: Don't join birds that are landing!
 					&& bird.getSkinVariant() == this.getSkinVariant()) {
 
 					// Join the flock!
@@ -503,6 +530,17 @@ public class MobBird extends MobTaskrunner implements IFlyable, IFlockable, IHom
 		return 6;
 	}
 
+	// Fix Issue 7: Override hurt to spook bird and alert flock
+	@Override
+	public boolean hurt(Entity attacker, int damage, DamageType damageType) {
+		boolean wasHurt = super.hurt(attacker, damage, damageType);
+		if (wasHurt && !world.isClientSide) {
+			spookBird();
+			alertFlockToFlee();
+		}
+		return wasHurt;
+	}
+
 	public String getEntityTexture() {
 		return "/assets/funnyfauna/textures/entity/bird/" + getSkinVariant() + ".png";
 	}
@@ -537,12 +575,15 @@ public class MobBird extends MobTaskrunner implements IFlyable, IFlockable, IHom
 			case 1:
 				sound = "funnyfauna:mob.bird.robin";
 				break;
+			case 2:
+				sound = "funnyfauna:mob.bird.bluejay";
+				break;
 			default:
 				sound = "funnyfauna:mob.bird.chickadee";
 				break;
 		}
 
 		float pitch = 0.9F + random.nextFloat() * 0.2F;
-		world.playSoundAtEntity(null, this, sound, 7F, pitch);
+		world.playSoundAtEntity(null, this, sound, 2.5F, pitch);
 	}
 }

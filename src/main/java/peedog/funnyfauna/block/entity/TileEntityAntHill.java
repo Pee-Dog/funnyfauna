@@ -6,6 +6,7 @@ import net.minecraft.core.block.entity.TileEntity;
 import net.minecraft.core.entity.player.Player;
 import net.minecraft.core.item.ItemStack;
 import net.minecraft.core.player.inventory.container.Container;
+import net.minecraft.core.util.phys.AABB;
 import net.minecraft.core.world.World;
 import org.jetbrains.annotations.Nullable;
 import peedog.funnyfauna.entity.ant.EntityAnt;
@@ -23,6 +24,61 @@ public class TileEntityAntHill extends TileEntity implements Container {
 
 	// Maximum ants that can be stored
 	private static final int MAX_ANTS = 20;
+
+	// Timer for checking nearby ants
+	private int checkTimer = 0;
+
+	@Override
+	public void tick() {
+		super.tick();
+
+		if (this.worldObj == null || this.worldObj.isClientSide) return;
+
+		// Check for nearby ants every second (20 ticks)
+		checkTimer++;
+		if (checkTimer >= 20) {
+			checkTimer = 0;
+			checkForNearbyAnts();
+		}
+	}
+
+	private void checkForNearbyAnts() {
+		// Large search radius to claim homeless ants and store returning ants
+		AABB searchBox = AABB.getTemporaryBB(
+			this.x, this.y, this.z,
+			this.x + 1, this.y + 1, this.z + 1
+		).grow(16.0, 6.0, 16.0);
+
+		List<EntityAnt> nearbyAnts = worldObj.getEntitiesWithinAABB(EntityAnt.class, searchBox);
+
+		for (EntityAnt ant : nearbyAnts) {
+			handleNearbyAnt(ant);
+		}
+	}
+
+	private void handleNearbyAnt(EntityAnt ant) {
+		double distanceSq = ant.getDistanceToHomeSq(this.x, this.y, this.z);
+
+		// If ant doesn't have a home and is within 8 blocks, claim it
+		if (!ant.hasHome()) {
+			if (this.getStoredAntCount() < MAX_ANTS && distanceSq < 64.0) { // 8^2 = 64
+				ant.setHome(this.x, this.y, this.z);
+				System.out.println("Ant hill claiming homeless ant at distance " + Math.sqrt(distanceSq));
+			}
+			return;
+		}
+
+		// Only store ants that have this hill as their home
+		if (ant.getHomeX() == this.x && ant.getHomeY() == this.y && ant.getHomeZ() == this.z) {
+			// Check if ant is close enough to enter (within 2 blocks)
+			if (distanceSq < 4.0) { // 2^2 = 4
+				// Try to store the ant
+				if (this.storeAnt(ant)) {
+					System.out.println("Stored ant in ant hill!");
+				}
+			}
+		}
+	}
 
 	// --- Container Interface for Items ---
 

@@ -16,7 +16,7 @@ public class EntityRendererWorm extends EntityRenderer<EntityWorm> {
 		float partialTick
 	) {
 		GL11.glPushMatrix();
-		GL11.glTranslatef((float)x, (float)y + 0.01F, (float)z);
+		GL11.glTranslatef((float)x, (float)y + 0.03F, (float)z);
 
 		GL11.glDisable(GL11.GL_LIGHTING);
 		GL11.glEnable(GL11.GL_NORMALIZE);

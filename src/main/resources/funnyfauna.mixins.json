@@ -19,7 +19,8 @@
   "client": [
     "PacketHandlerClientMixin",
     "player.PlayerLocalMixin",
-    "player.PlayerLocalHandleFunnyRideableMixin"
+    "player.PlayerLocalHandleFunnyRideableMixin",
+    "DynamicTexturesMixin"
   ],
   "server": [
     "PacketHandlerServerMixin",

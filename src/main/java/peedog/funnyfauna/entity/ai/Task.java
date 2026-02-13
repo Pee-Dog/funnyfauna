@@ -70,19 +70,27 @@ public abstract class Task<T extends MobTaskrunner> {
 	/**
 	 * Stops the task. Next time it's run it will run `onStart`
 	 */
+	/**
+	 * Stops the task. Next time it's run it will run `onStart`
+	 */
 	public void stop(Task interruptTask) {
 		if (!_active) return;
+		if (_stopped) return; // Already stopped, prevent recursion
+
+		// Mark as stopped immediately to prevent recursion
+		_stopped = true;
+
 		if (!_first) {
 			onStop(interruptTask);
 		}
 
-		if (_sub != null && !_sub.stopped()) {
+		// Stop child task if it exists and isn't already stopped
+		if (_sub != null && _sub.isActive() && !_sub.stopped()) {
 			_sub.stop(interruptTask);
 		}
 
 		_first = true;
 		_active = false;
-		_stopped = true;
 	}
 
 	/**

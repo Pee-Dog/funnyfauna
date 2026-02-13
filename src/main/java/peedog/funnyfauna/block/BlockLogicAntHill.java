@@ -11,7 +11,6 @@ import net.minecraft.core.util.phys.AABB;
 import net.minecraft.core.world.World;
 import peedog.funnyfauna.block.entity.TileEntityAntHill;
 import peedog.funnyfauna.entity.ant.EntityAnt;
-import peedog.funnyfauna.gui.MenuAntHill;
 
 import java.util.List;
 import java.util.Random;
@@ -22,6 +21,8 @@ public class BlockLogicAntHill extends BlockLogic {
 		super(block, Material.sand);
 		// Register the tile entity
 		block.withEntity(TileEntityAntHill::new);
+		// Schedule random ticks for ant detection
+		block.setTicking(true);
 	}
 
 	@Override
@@ -33,14 +34,13 @@ public class BlockLogicAntHill extends BlockLogic {
 		TileEntity tileEntity = world.getTileEntity(x, y, z);
 		if (tileEntity instanceof TileEntityAntHill) {
 			TileEntityAntHill antHill = (TileEntityAntHill) tileEntity;
-
-			// Open the chest screen with the tile entity (which implements Container)
 			player.displayChestScreen(antHill, (double)x, (double)y, (double)z);
 			return true;
 		}
 
 		return false;
 	}
+
 	/**
 	 * Called when the block is broken - release all ants and drop items
 	 */
@@ -67,10 +67,8 @@ public class BlockLogicAntHill extends BlockLogic {
 	}
 
 	/**
-	 * Periodically check for nearby ants to capture
-	 * This provides an alternative to collision detection
+	 * Handle an ant that is near the ant hill
 	 */
-	// Add this method to BlockLogicAntHill.java and call it from both collision and tick methods
 	private void handleAntNearAntHill(World world, int x, int y, int z, EntityAnt ant) {
 		// Get the tile entity
 		TileEntity tileEntity = world.getTileEntity(x, y, z);
@@ -78,27 +76,22 @@ public class BlockLogicAntHill extends BlockLogic {
 
 		TileEntityAntHill antHill = (TileEntityAntHill) tileEntity;
 
-		// DEBUG: Log what's happening
-		if (world.rand.nextInt(100) == 0) { // Only log occasionally to avoid spam
-			System.out.println("Ant near ant hill at " + x + "," + y + "," + z);
-			System.out.println("Ant has home: " + ant.hasHome());
-			System.out.println("Ant hill count: " + antHill.getStoredAntCount() + "/" + antHill.getMaxAnts());
-		}
+		// Calculate distance
+		double distanceSq = ant.getDistanceToHomeSq(x, y, z);
 
-		// If ant doesn't have a home, set this ant hill as its home
+		// If ant doesn't have a home and is within 8 blocks, set this ant hill as its home
 		if (!ant.hasHome()) {
-			if (antHill.getStoredAntCount() < antHill.getMaxAnts()) {
+			if (antHill.getStoredAntCount() < antHill.getMaxAnts() && distanceSq < 64.0) { // 8^2 = 64
 				ant.setHome(x, y, z);
-				System.out.println("Setting ant home to ant hill at " + x + "," + y + "," + z);
+				System.out.println("Ant hill claiming homeless ant at distance " + Math.sqrt(distanceSq));
 			}
-			return; // Let the ant go out and forage first
+			return; // Let the ant go out and forage
 		}
 
 		// Only store ants that have this block as their home
 		if (ant.getHomeX() == x && ant.getHomeY() == y && ant.getHomeZ() == z) {
-			// Check if ant is close enough (within 1.5 blocks)
-			double distanceSq = ant.getDistanceToHomeSq(x, y, z);
-			if (distanceSq < 2.25) {
+			// Check if ant is close enough to enter (within 2 blocks)
+			if (distanceSq < 4.0) { // 2^2 = 4
 				// Try to store the ant
 				if (antHill.storeAnt(ant)) {
 					System.out.println("Stored ant in ant hill!");
@@ -107,7 +100,9 @@ public class BlockLogicAntHill extends BlockLogic {
 		}
 	}
 
-	// Update onEntityCollidedWithBlock to use this method:
+	/**
+	 * Called when an entity collides with this block
+	 */
 	@Override
 	public void onEntityCollidedWithBlock(World world, int x, int y, int z, Entity entity) {
 		// Only process on server side
@@ -120,7 +115,10 @@ public class BlockLogicAntHill extends BlockLogic {
 		handleAntNearAntHill(world, x, y, z, ant);
 	}
 
-	// Update updateTick to use this method:
+	/**
+	 * Called periodically (random tick)
+	 * This is CRITICAL for detecting nearby ants
+	 */
 	@Override
 	public void updateTick(World world, int x, int y, int z, Random rand) {
 		if (world.isClientSide) return;
@@ -131,21 +129,38 @@ public class BlockLogicAntHill extends BlockLogic {
 
 		TileEntityAntHill antHill = (TileEntityAntHill) tileEntity;
 
-		// If ant hill is full, don't bother checking
-		if (antHill.getStoredAntCount() >= antHill.getMaxAnts()) return;
+		// Always search for nearby ants - we need to claim homeless ones
+		// and store ants returning home
 
-		// Search for nearby ants with a LARGER radius (8 blocks instead of 2)
+		// Large search radius to claim homeless ants
 		AABB searchBox = AABB.getTemporaryBB(
 			x, y, z,
 			x + 1, y + 1, z + 1
-		).grow(8.0, 4.0, 8.0); // Increased from 2.0, 1.0, 2.0
+		).grow(16.0, 6.0, 16.0); // Very large radius - 16 blocks
 
 		List<EntityAnt> nearbyAnts = world.getEntitiesWithinAABB(EntityAnt.class, searchBox);
 
-		System.out.println("Found " + nearbyAnts.size() + " ants near ant hill at " + x + "," + y + "," + z);
+		if (nearbyAnts.size() > 0) {
+			System.out.println("Ant hill tick: Found " + nearbyAnts.size() + " ants nearby");
+		}
 
 		for (EntityAnt ant : nearbyAnts) {
 			handleAntNearAntHill(world, x, y, z, ant);
+		}
+
+		// Schedule next tick
+		world.scheduleBlockUpdate(x, y, z, this.id(), 20); // Check every second
+	}
+
+	/**
+	 * Called when the block is placed
+	 */
+	@Override
+	public void onBlockPlacedByWorld(World world, int x, int y, int z) {
+		if (!world.isClientSide) {
+			// Start the tick updates
+			world.scheduleBlockUpdate(x, y, z, this.id(), 20);
+			System.out.println("Ant hill placed at " + x + "," + y + "," + z + " - starting ant detection");
 		}
 	}
 }

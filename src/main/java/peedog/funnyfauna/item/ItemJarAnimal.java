@@ -47,60 +47,42 @@ public class ItemJarAnimal extends ItemPlaceable {
 		if (!world.isClientSide) {
 			Entity entity = entityFactory.apply(world, player);
 
-			// Restore cricket color from NBT
-			if (entity instanceof EntityCricket
-				&& stack.getData() != null
-				&& stack.getData().containsKey("CricketColor")) {
-				((EntityCricket) entity).setColor(
-					stack.getData().getInteger("CricketColor")
-				);
+			if (stack.getData() != null) {
+
+				if (entity instanceof EntityCricket
+					&& stack.getData().containsKey("CricketColor")) {
+
+					((EntityCricket) entity).setColor(
+						stack.getData().getInteger("CricketColor")
+					);
+				}
+
+				if (entity instanceof peedog.funnyfauna.entity.worm.EntityWorm
+					&& stack.getData().containsKey("WormColor")) {
+
+					((peedog.funnyfauna.entity.worm.EntityWorm) entity)
+						.setColor(stack.getData().getInteger("WormColor"));
+				}
 			}
 
+
 			// -------- Raytrace spawn position --------
-			double reach = 4.5;
-
-			Vec3 start = Vec3.getTempVec3(
-				player.x,
-				player.y + player.getHeadHeight(),
-				player.z
-			);
-
 			Vec3 look = player.getLookAngle();
-
-			Vec3 end = Vec3.getTempVec3(
-				start.x + look.x * reach,
-				start.y + look.y * reach,
-				start.z + look.z * reach
-			);
-
-			HitResult hit = world.checkBlockCollisionBetweenPoints(
-				start,
-				end,
-				false, // collide with fluids
-				false, // ignore non-colliders
-				false  // use selector boxes
-			);
 
 			double spawnX;
 			double spawnY;
 			double spawnZ;
-
-			if (hit != null) {
-				spawnX = hit.x + 0.5;
-				spawnY = hit.y + 0.05; // lift above surface
-				spawnZ = hit.z + 0.5;
-			} else {
-				// Fallback: spawn in front of player
 				spawnX = player.x + look.x * 2.0;
-				spawnY = player.y;
+				spawnY = player.y - 1;
 				spawnZ = player.z + look.z * 2.0;
-			}
 
 			entity.setPos(spawnX, spawnY, spawnZ);
 			world.entityJoinedWorld(entity);
 
-			// Return empty jar
-			return new ItemStack(Items.JAR);
+
+			if (player.getGamemode().consumeBlocks()) {
+				return new ItemStack(Items.JAR);
+			}
 		}
 
 		return stack;

@@ -6,7 +6,8 @@
     "/assets/funnyfauna/models/entity/boar.geo.json",
     "/assets/funnyfauna/models/entity/bird.geo.json",
     "/assets/funnyfauna/models/entity/fox.geo.json",
-    "/assets/funnyfauna/models/entity/mouse.geo.json"
+    "/assets/funnyfauna/models/entity/mouse.geo.json",
+    "/assets/funnyfauna/models/entity/bunny.geo.json"
   ],
   "renderers": {
     "funnyfauna:horse": {
@@ -29,6 +30,9 @@
     },
     "funnyfauna:mouse": {
       "main": "geometry.mouse"
+    },
+    "funnyfauna:bunny": {
+      "main": "geometry.bunny"
     }
   }
 }

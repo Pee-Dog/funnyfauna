@@ -65,9 +65,13 @@ public class MobRendererBird extends MobRenderer<MobBird> {
 			wingLeft.rotX = wingLeft.rotZ = 0;
 			wingRight.rotX = wingRight.rotZ = 0;
 		}
+		if (!entity.onGround && entity.vehicle == null) {
+			GL11.glRotatef((float) (entity.yd * -50.0), -1.0F, 0.0F, 0.0F);
+		}
 
 		return model;
 	}
+
 
 	@Override
 	protected int maxRenderLayer(@NonNull MobBird entity) {

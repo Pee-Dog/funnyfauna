@@ -3,13 +3,17 @@ package peedog.funnyfauna.entity.worm;
 import com.mojang.nbt.tags.CompoundTag;
 import net.minecraft.core.entity.Entity;
 import net.minecraft.core.entity.player.Player;
+import net.minecraft.core.item.ItemStack;
+import net.minecraft.core.item.Items;
 import net.minecraft.core.util.helper.MathHelper;
 import net.minecraft.core.world.World;
 import org.jetbrains.annotations.NotNull;
+import peedog.funnyfauna.item.FunnyFaunaItems;
 
 public class EntityWorm extends Entity {
 
 	/* ===================== Movement ===================== */
+	private static final int DATA_COLOR = 16;
 	private static final double CRAWL_SPEED = 0.02;
 	private static final double GRAVITY = 0.04;
 
@@ -25,13 +29,15 @@ public class EntityWorm extends Entity {
 
 	public EntityWorm(World world) {
 		super(world);
-		this.setSize(0.4F, 0.15F);
-		this.footSize = 1.5F; // snaps up blocks like horses
+		this.setSize(0.25F, 0.25F);
+		this.footSize = 1.0F; // snaps up blocks like horses
 
 		// generate color ONCE on spawn
 		if (!world.isClientSide) {
 			this.color = generateWormColor();
 		}
+		System.out.println("Worm constructor called");
+
 	}
 
 	@Override
@@ -73,19 +79,26 @@ public class EntityWorm extends Entity {
 		return color;
 	}
 
+	public void setColor(int color) {
+		this.color = color;
+	}
+
+
 	/* ===================== Tick ===================== */
 
 	@Override
 	public void tick() {
 		super.tick();
+		if (tickCount == 1) {
+			System.out.println("Worm first tick");
+		}
+
 		// ===================== Distance Despawn =====================
 		if (!world.isClientSide) {
-			Player nearest = world.getClosestPlayerToEntity(this, 32);
-			if (nearest == null) {
-				remove();
-				return;
-			}
+			Player nearest = world.getClosestPlayerToEntity(this, 40);
+			if (nearest == null) { remove(); return; }
 		}
+
 
 		animTick++;
 
@@ -192,8 +205,33 @@ public class EntityWorm extends Entity {
 
 	@Override
 	public boolean interact(@NotNull Player player) {
-		return false; // worms are dumb
+		ItemStack held = player.inventory.getCurrentItem();
+
+		if (held != null && held.itemID == Items.JAR.id) {
+			if (!player.world.isClientSide) {
+
+				int slot = player.inventory.getCurrentItemIndex();
+				player.inventory.removeItem(slot, 1);
+
+				ItemStack wormJar = new ItemStack(FunnyFaunaItems.JAR_WORM);
+
+				CompoundTag tag = new CompoundTag();
+				tag.putInt("WormColor", color);
+				wormJar.setData(tag);
+
+				player.inventory.insertItem(wormJar, true);
+				if (wormJar.stackSize > 0) {
+					player.dropPlayerItemWithRandomChoice(wormJar, false);
+				}
+
+				remove();
+			}
+			return true;
+		}
+
+		return false;
 	}
+
 
 	/* ===================== Required ===================== */
 

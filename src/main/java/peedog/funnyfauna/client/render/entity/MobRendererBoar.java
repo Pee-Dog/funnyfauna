@@ -35,8 +35,25 @@ public class MobRendererBoar extends MobRenderer<MobBoar> {
 		BoneTransform legBackLeft = model.getTransform("leg2");
 		BoneTransform legBackRight = model.getTransform("leg1");
 
-		head.rotX = headPitch;
+		// Store the base head rotation for this frame
+		// Base head rotation
+		float baseHeadRotX = headPitch;
+
+// Attack animation
+		if (entity.attackAnimTime > 0) {
+			float attackProgress = (entity.attackAnimTime - partialTick) / 10.0F;
+			attackProgress = MathHelper.clamp(attackProgress, 0.0F, 1.0F);
+			float thrust = MathHelper.sin(attackProgress * (float)Math.PI) * 1.5F;
+
+			head.rotX = baseHeadRotX + thrust;
+		} else {
+			head.rotX = baseHeadRotX;
+		}
+
+// Head yaw stays normal
 		head.rotY = headYaw;
+
+
 		legFrontLeft.rotX = legBackRight.rotX = MathHelper.cos(limbSwing * 0.6662F) * 1.4F * limbYaw;
 		legFrontRight.rotX = legBackLeft.rotX = MathHelper.cos(limbSwing * 0.6662F + 3.141593F) * 1.4F * limbYaw;
 

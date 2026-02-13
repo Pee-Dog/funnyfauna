@@ -22,8 +22,12 @@ import net.minecraft.core.world.pathfinder.Path;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import org.spongepowered.asm.mixin.Unique;
+import peedog.funnyfauna.entity.MobTaskrunner;
+import peedog.funnyfauna.entity.ai.Task;
+import peedog.funnyfauna.entity.ai.controllers.FoxTask;
+import peedog.funnyfauna.entity.ai.interfaces.IFollower;
 
-public class MobFox extends MobAnimal {
+public class MobFox extends MobTaskrunner implements IFollower {
 
 	// ===== Data IDs =====
 	public static final int DATA_FLAGS = 16;
@@ -58,6 +62,12 @@ public class MobFox extends MobAnimal {
 		this.moveSpeed = 1.2F;
 		this.scoreValue = 300;
 	}
+
+	@Override
+	public Task<? extends MobTaskrunner> createTask() {
+		return new FoxTask(this);
+	}
+
 
 	@Override
 	protected void defineSynchedData() {
@@ -106,66 +116,6 @@ public class MobFox extends MobAnimal {
 			return;
 		}
 		super.push(entity);
-	}
-
-	// =========================================================
-	// AI
-	// =========================================================
-
-	@Override
-	protected void updateAI() {
-		super.updateAI();
-
-		if (this.isFoxSitting()) {
-			this.setTarget(null);
-			return;
-		}
-
-		if (this.isFoxTamed()) {
-			Player owner = this.world.getPlayerEntityByUUID(this.getFoxOwner());
-			if (owner != null) {
-				float dist = owner.distanceTo(this);
-
-				// 1. TELEPORT / FOLLOW LOGIC
-				if (!this.hasPath() && this.vehicle == null && dist > 5.0F) {
-					this.setPathToOwnerOrTeleport(owner, dist);
-				}
-			}
-		}
-		this.updateDistraction();
-	}
-
-
-
-	private void setPathToOwnerOrTeleport(Entity owner, float distance) {
-		Path path = this.world.getPathToEntity(this, owner, 16.0F);
-		if (path == null && distance > 12.0F) {
-			int x = MathHelper.floor(owner.x);
-			int y = MathHelper.floor(owner.bb.minY);
-			int z = MathHelper.floor(owner.z);
-
-			for (int dx = -2; dx <= 2; ++dx) {
-				for (int dz = -2; dz <= 2; ++dz) {
-					if ((Math.abs(dx) > 1 || Math.abs(dz) > 1)
-						&& this.world.isBlockNormalCube(x + dx, y - 1, z + dz)
-						&& !this.world.isBlockNormalCube(x + dx, y, z + dz)
-						&& !this.world.isBlockNormalCube(x + dx, y + 1, z + dz)) {
-
-						this.moveTo(
-							x + dx + 0.5,
-							y,
-							z + dz + 0.5,
-							this.yRot,
-							this.xRot
-						);
-						this.fallDistance = 0.0F;
-						return;
-					}
-				}
-			}
-		} else {
-			this.setPathToEntity(path);
-		}
 	}
 
 	@Override
@@ -218,7 +168,7 @@ public class MobFox extends MobAnimal {
 
 
 
-	private void clearDistraction() {
+	public void clearDistraction() {
 		this.setDistracting(false);
 		this.distractionTarget = null;
 		this.distractionTicks = 0;
@@ -232,7 +182,7 @@ public class MobFox extends MobAnimal {
 		this.moveSpeed = 1.2F;
 	}
 
-	private void tryNip(Mob target) {
+	public void tryNip(Entity target) {
 		if (--this.nipCooldown > 0) return;
 
 		double dist = this.distanceTo(target);
@@ -346,7 +296,7 @@ public class MobFox extends MobAnimal {
 		this.setPathToEntity(null);
 	}
 
-	private void runRandomNear(Mob target) {
+	public void runRandomNear(Entity target) {
 		if (target == null) return;
 
 		double dx = target.x - this.x;
@@ -418,11 +368,11 @@ public class MobFox extends MobAnimal {
 	@Override
 	public boolean hurt(Entity attacker, int damage, DamageType type) {
 		// 1. Owner Immunity
-		if (this.isFoxTamed() && attacker instanceof Player) {
-			if (((Player)attacker).uuid.equals(this.getFoxOwner())) {
-				return false;
-			}
-		}
+//		if (this.isFoxTamed() && attacker instanceof Player) {
+//			if (((Player)attacker).uuid.equals(this.getFoxOwner())) {
+//				return false;
+//			}
+//		}
 
 		// 2. Player Attacks: No dodging allowed.
 		if (attacker instanceof Player) {
@@ -532,6 +482,11 @@ public class MobFox extends MobAnimal {
 		return true;
 	}
 
+	public Entity getDistractionTarget() {
+		return this.distractionTarget;
+	}
+
+
 	@Override
 	public String getLivingSound() {
 		return "funnyfauna:mob.fox.idle";
@@ -547,4 +502,14 @@ public class MobFox extends MobAnimal {
 		return "funnyfauna:mob.fox.hurt";
 	}
 
+	@Override
+	public @Nullable Entity leader() {
+		if (!this.isFoxTamed()) return null;
+		return this.world.getPlayerEntityByUUID(this.getFoxOwner());
+	}
+
+	@Override
+	public float followSpeed() {
+		return 1.2F;
+	}
 }

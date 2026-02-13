@@ -2,13 +2,17 @@ package peedog.funnyfauna.mixin.player;
 
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.entity.player.PlayerLocal;
+import net.minecraft.core.entity.player.Player;
 import net.minecraft.core.item.ItemStack;
 import net.minecraft.core.player.inventory.container.ContainerInventory;
+import net.minecraft.core.world.World;
+import org.jetbrains.annotations.Nullable;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Unique;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
+import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 import peedog.funnyfauna.PlayerInventoryDisplay;
 import peedog.funnyfauna.entity.camel.MobCamel;
 import peedog.funnyfauna.gui.ContainerCamel;
@@ -17,7 +21,10 @@ import peedog.funnyfauna.gui.GuiSatchel;
 import peedog.funnyfauna.item.ItemToggleable;
 
 @Mixin(value = PlayerLocal.class, remap = false)
-public class PlayerLocalMixin implements PlayerInventoryDisplay {
+public abstract class PlayerLocalMixin extends Player implements PlayerInventoryDisplay {
+	public PlayerLocalMixin(@Nullable World world) {
+		super(world);
+	}
 
 	@Unique
 	private final Minecraft mc = Minecraft.getMinecraft();
@@ -102,5 +109,15 @@ public class PlayerLocalMixin implements PlayerInventoryDisplay {
 			funnyfauna$syncEquippedFromInventory();
 			funnyfauna$equippedSynced = true;
 		}
+	}
+	@Inject(method = "getFovModifier", at = @At("HEAD"), cancellable = true)
+	public void getFovModifier(CallbackInfoReturnable<Float> cir) {
+		float f = 1.0F;
+		double speed = this.baseSpeed;
+		if (this.isSprinting()) speed = (speed + this.baseSpeed * 0.3);
+		f *= ((float)speed / this.baseSpeed + 1.0F) / 2.0F;
+		f *= this.heldObject == null ? 1.0F : 0.8F;
+		cir.setReturnValue(f);
+		cir.cancel();
 	}
 }

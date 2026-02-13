@@ -5,6 +5,7 @@ import peedog.funnyfauna.entity.ant.EntityAnt;
 import peedog.funnyfauna.entity.armadillo.MobArmadillo;
 import peedog.funnyfauna.entity.bird.MobBird;
 import peedog.funnyfauna.entity.boar.MobBoar;
+import peedog.funnyfauna.entity.bunny.MobBunny;
 import peedog.funnyfauna.entity.camel.MobCamel;
 import peedog.funnyfauna.entity.cricket.EntityCricket;
 import peedog.funnyfauna.entity.emu.MobEmu;
@@ -53,6 +54,7 @@ public class FunnyFaunaEntities {
 		EntityHelper.createEntity(MobBird.class, NamespaceID.getPermanent(MOD_ID, "bird"), entityKey("bird"));
 		EntityHelper.createEntity(MobFox.class, NamespaceID.getPermanent(MOD_ID, "fox"), entityKey("fox"));
 		EntityHelper.createEntity(MobMouse.class, NamespaceID.getPermanent(MOD_ID, "mouse"), entityKey("mouse"));
+		EntityHelper.createEntity(MobBunny.class, NamespaceID.getPermanent(MOD_ID, "bunny"), entityKey("bunny"));
 
 
 

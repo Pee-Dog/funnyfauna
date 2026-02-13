@@ -56,7 +56,7 @@ public class MobRendererArmadillo extends MobRenderer<MobArmadillo> {
 		// -----------------------------
 		// COWER animation
 		// -----------------------------
-		float crouch = entity.getCowerProgress(partialTick);
+		float crouch = entity.cowerProgress(partialTick);
 		if (crouch > 0) {
 			// Lower and compress body
 			body.posY -= crouch;

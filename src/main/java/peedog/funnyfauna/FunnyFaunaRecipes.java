@@ -24,11 +24,10 @@ public class FunnyFaunaRecipes implements RecipeEntrypoint {
 			.create("sturdy_shell", FunnyFaunaItems.STURDY_SHELL.getDefaultStack());
 		RecipeBuilder.Shaped(MOD_ID,
 				"###",
-				"#X#",
+				"# #",
 				"###"
 			)
 			.addInput('#', FunnyFaunaItems.COARSEHIDE)
-			.addInput('X', Items.INGOT_STEEL_CRUDE)
 			.create("pocket", FunnyFaunaItems.POCKET.getDefaultStack());
 		RecipeBuilder.Shaped(MOD_ID,
 				"##",
@@ -56,11 +55,15 @@ public class FunnyFaunaRecipes implements RecipeEntrypoint {
 			.addInput(FunnyFaunaItems.COARSEHIDE)
 			.create("paper", Items.PAPER.getDefaultStack());
 		ItemStack deadBushes = Blocks.DEADBUSH.getDefaultStack();
-		deadBushes.stackSize = 4;
-
 		RecipeBuilder.Shapeless(MOD_ID)
 			.addInput(FunnyFaunaItems.TUMBLEWEED)
 			.create("dead_bush", deadBushes);
+		deadBushes.stackSize = 4;
+		ItemStack scales = FunnyFaunaItems.SCALES.getDefaultStack();
+		RecipeBuilder.Shapeless(MOD_ID)
+			.addInput(FunnyFaunaItems.FOOD_LIZARDTAIL)
+			.create("scales", scales);
+		scales.stackSize = 2;
 	}
 
 	@Override

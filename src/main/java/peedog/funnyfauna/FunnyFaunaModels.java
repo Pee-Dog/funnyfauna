@@ -3,10 +3,7 @@ package peedog.funnyfauna;
 import net.minecraft.client.render.EntityRenderDispatcher;
 import net.minecraft.client.render.TileEntityRenderDispatcher;
 import net.minecraft.client.render.block.color.BlockColorDispatcher;
-import net.minecraft.client.render.block.model.BlockModelCactus;
-import net.minecraft.client.render.block.model.BlockModelDispatcher;
-import net.minecraft.client.render.block.model.BlockModelJar;
-import net.minecraft.client.render.block.model.BlockModelStandard;
+import net.minecraft.client.render.block.model.*;
 import net.minecraft.client.render.item.model.ItemModelDispatcher;
 import net.minecraft.client.render.item.model.ItemModelStandard;
 import net.minecraft.client.render.texture.stitcher.IconCoordinate;
@@ -25,6 +22,7 @@ import peedog.funnyfauna.entity.ant.EntityAnt;
 import peedog.funnyfauna.entity.armadillo.MobArmadillo;
 import peedog.funnyfauna.entity.bird.MobBird;
 import peedog.funnyfauna.entity.boar.MobBoar;
+import peedog.funnyfauna.entity.bunny.MobBunny;
 import peedog.funnyfauna.entity.camel.MobCamel;
 import peedog.funnyfauna.entity.cricket.EntityCricket;
 import peedog.funnyfauna.entity.emu.MobEmu;
@@ -48,6 +46,7 @@ public class FunnyFaunaModels implements ModelEntrypoint {
 	public void initBlockModels(BlockModelDispatcher blockModelDispatcher) {
 		ModelHelper.setBlockModel(FunnyFaunaBlocks.ANT_HILL, () -> new BlockModelStandard<>(FunnyFaunaBlocks.ANT_HILL).setAllTextures(0, "minecraft:block/sand"));
 		ModelHelper.setBlockModel(FunnyFaunaBlocks.JAR_CRICKET, () -> new BlockModelJarClosed(FunnyFaunaBlocks.JAR_CRICKET));
+		ModelHelper.setBlockModel(FunnyFaunaBlocks.HAYBALE, () -> new BlockModelAxisAligned(Blocks.LOG_OAK).setTex(0, "funnyfauna:block/haybale_top", new Side[]{Side.TOP, Side.BOTTOM}).setTex(0, "funnyfauna:block/haybale_side", new Side[]{Side.NORTH, Side.EAST, Side.SOUTH, Side.WEST}));
 	}
 
 	@Override
@@ -61,10 +60,13 @@ public class FunnyFaunaModels implements ModelEntrypoint {
 		dispatcher.addDispatch(new ItemModelStandard(FunnyFaunaItems.FOOD_EGGEMU_COOKED, null).setIcon("funnyfauna:item/food_eggemu_cooked"));
 		dispatcher.addDispatch(new ItemModelStandard(FunnyFaunaItems.EGG_EMU, null).setIcon("funnyfauna:item/egg_emu"));
 		dispatcher.addDispatch(new ItemModelStandard(FunnyFaunaItems.JAR_CRICKET, null).setIcon("funnyfauna:item/jar_cricket"));
+		dispatcher.addDispatch(new ItemModelStandard(FunnyFaunaItems.JAR_WORM, null).setIcon("funnyfauna:item/jar_cricket"));
 		dispatcher.addDispatch(new ItemModelStandard(FunnyFaunaItems.SCALES, null).setIcon("funnyfauna:item/scales"));
 		dispatcher.addDispatch(new ItemModelStandard(FunnyFaunaItems.SCALES_REINFORCED, null).setIcon("funnyfauna:item/scales_reinforced"));
 		dispatcher.addDispatch(new ItemModelStandard(FunnyFaunaItems.SCUTE, null).setIcon("funnyfauna:item/scute"));
 		dispatcher.addDispatch(new ItemModelStandard(FunnyFaunaItems.TUMBLEWEED, null).setIcon("funnyfauna:item/tumbleweed"));
+		dispatcher.addDispatch(new ItemModelStandard(FunnyFaunaItems.TUMBLEWEED, null).setIcon("funnyfauna:item/tumbleweed"));
+		dispatcher.addDispatch(new ItemModelStandard(FunnyFaunaItems.BIOME_COMPASS, null).setIcon("funnyfauna:item/biome_compass"));
 		dispatcher.addDispatch(new ItemModelStandard(FunnyFaunaItems.ARM_EXTENSION, null) {
 			private final IconCoordinate OFF =
 				TextureRegistry.getTexture("funnyfauna:item/arm_extension_off");
@@ -124,6 +126,7 @@ public class FunnyFaunaModels implements ModelEntrypoint {
 		ModelHelper.setEntityModel(MobBird.class, MobRendererBird::new);
 		ModelHelper.setEntityModel(MobFox.class, MobRendererFox::new);
 		ModelHelper.setEntityModel(MobMouse.class, MobRendererMouse::new);
+		ModelHelper.setEntityModel(MobBunny.class, MobRendererBunny::new);
 
 
 	}

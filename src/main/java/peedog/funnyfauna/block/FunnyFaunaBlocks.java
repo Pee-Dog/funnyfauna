@@ -1,6 +1,9 @@
 package peedog.funnyfauna.block;
 
 import net.minecraft.core.block.Block;
+import net.minecraft.core.block.BlockLogic;
+import net.minecraft.core.block.BlockLogicAxisAligned;
+import net.minecraft.core.block.material.Material;
 import net.minecraft.core.sound.BlockSounds;
 import peedog.funnyfauna.item.FunnyFaunaItems;
 import turniplabs.halplibe.helper.BlockBuilder;
@@ -16,6 +19,7 @@ public final class FunnyFaunaBlocks implements BlockInitEntrypoint {
 	public static Block<?> ANT_HILL;
 	public static Block<?> JAR_CRICKET;
 	public static Block<?> CACTUS_GOLDEN;
+	public static Block<?> HAYBALE;
 
 
 	public static void init() {
@@ -43,7 +47,11 @@ public final class FunnyFaunaBlocks implements BlockInitEntrypoint {
 			.setTicking(true)
 			.setResistance(0.1f)
 			.build("jar.cricket", "jar_cricket", blockID++, block -> new BlockLogicJarCricket(block, () -> FunnyFaunaItems.JAR_CRICKET));
-
+		HAYBALE = new BlockBuilder(MOD_ID)
+			.setBlockSound(BlockSounds.GRASS)
+			.setHardness(0.2f)
+			.setResistance(0.2f)
+			.build("haybale", "haybale", blockID++, block -> new BlockLogicAxisAligned(block, Material.grass));
 
 	}
 

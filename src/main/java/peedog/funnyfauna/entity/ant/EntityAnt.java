@@ -3,15 +3,14 @@ package peedog.funnyfauna.entity.ant;
 import com.mojang.nbt.tags.CompoundTag;
 import net.minecraft.core.entity.Entity;
 import net.minecraft.core.item.ItemStack;
-import net.minecraft.core.util.helper.DamageType;
 import net.minecraft.core.util.helper.MathHelper;
 import net.minecraft.core.world.World;
 import peedog.funnyfauna.entity.MobTaskrunner;
-import peedog.funnyfauna.entity.ai.PheromoneManager;
+import peedog.funnyfauna.entity.ai.path.PheromoneManager;
 import peedog.funnyfauna.entity.ai.Task;
 import peedog.funnyfauna.entity.ai.controllers.AntTask;
-import peedog.funnyfauna.entity.ai.i.IHomeable;
-import peedog.funnyfauna.entity.ai.i.IItemHolder;
+import peedog.funnyfauna.entity.ai.interfaces.IHomeable;
+import peedog.funnyfauna.entity.ai.interfaces.IItemHolder;
 
 public class EntityAnt extends MobTaskrunner implements IHomeable, IItemHolder {
 
@@ -23,7 +22,6 @@ public class EntityAnt extends MobTaskrunner implements IHomeable, IItemHolder {
 	public int homeY = -1;
 	public int homeZ = -1;
 	public boolean hasHome = false;
-	private boolean initializedHome = false; // Track if home has been set
 
 	public EntityAnt(World world) {
 		super(world);
@@ -31,11 +29,6 @@ public class EntityAnt extends MobTaskrunner implements IHomeable, IItemHolder {
 		this.footSize = 1F; // Allows stepping up full blocks automatically
 		this.moveSpeed = 0.25F;
 		this.heartsHalvesLife = 10;
-
-		// Set initial home if spawning naturally
-		if (!world.isClientSide) {
-			setHomeToCurrentPosition();
-		}
 	}
 
 	@Override
@@ -55,33 +48,17 @@ public class EntityAnt extends MobTaskrunner implements IHomeable, IItemHolder {
 		super.tick();
 
 		if (!this.world.isClientSide) {
-			// Initialize home on first tick if not already set
-			if (!initializedHome && this.tickCount > 5) {
-				setHomeToCurrentPosition();
-				initializedHome = true;
-			}
-
 			// 1. Handle Wall Climbing Physics
 			this.setBesideClimbableBlock(this.horizontalCollision);
 
 			// 2. Leave Pheromone Trail ONLY when carrying item back to home
-			if (this.getHeldItem() != null && this.tickCount % 10 == 0) {
+			if (this.getHeldItem() != null && this.hasHome && this.tickCount % 10 == 0) {
 				PheromoneManager.addScent(
 					MathHelper.floor(this.x),
 					MathHelper.floor(this.y),
 					MathHelper.floor(this.z)
 				);
 			}
-		}
-	}
-
-	// Method to set home to current position
-	private void setHomeToCurrentPosition() {
-		if (!this.hasHome) {
-			this.homeX = MathHelper.floor(this.x);
-			this.homeY = MathHelper.floor(this.y);
-			this.homeZ = MathHelper.floor(this.z);
-			this.hasHome = true;
 		}
 	}
 
@@ -130,7 +107,7 @@ public class EntityAnt extends MobTaskrunner implements IHomeable, IItemHolder {
 		this.homeY = y;
 		this.homeZ = z;
 		this.hasHome = true;
-		this.initializedHome = true;
+		System.out.println("Ant home set to: " + x + "," + y + "," + z);
 	}
 
 	@Override
@@ -206,7 +183,6 @@ public class EntityAnt extends MobTaskrunner implements IHomeable, IItemHolder {
 			this.homeY = tag.getInteger("homeY");
 			this.homeZ = tag.getInteger("homeZ");
 			this.hasHome = tag.getBoolean("hasHome");
-			this.initializedHome = true;
 		}
 
 		// Load held item
@@ -230,6 +206,7 @@ public class EntityAnt extends MobTaskrunner implements IHomeable, IItemHolder {
 
 	@Override
 	public void spawnInit() {
+		System.out.println("Ant spawned at " + (int)this.x + "," + (int)this.y + "," + (int)this.z + " - no home yet");
 	}
 
 	public int getAnimFrame() {

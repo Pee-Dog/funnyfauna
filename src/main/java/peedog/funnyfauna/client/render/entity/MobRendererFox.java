@@ -108,6 +108,10 @@ public class MobRendererFox extends MobRenderer<MobFox> {
 				MathHelper.cos(limbSwing * 0.6662F + (float) Math.PI) * 1.4F * limbYaw;
 		}
 
+		if (tail != null) {
+			tail.rotZ = MathHelper.cos(limbSwing * 0.6662F + (float) Math.PI) * 1.4F * limbYaw;
+		}
+
 		// Sitting
 		if (entity.isFoxSitting()) {
 			limbSwing = 0.0F;
@@ -148,8 +152,6 @@ public class MobRendererFox extends MobRenderer<MobFox> {
 
 		// Tail animation
 		if (tail != null) {
-			float walkSway =
-				MathHelper.cos(limbSwing * 0.6662F) * 0.7F * -0.55F;
 
 			float idleSway =
 				MathHelper.cos((entity.tickCount + partialTick) * 0.1F) * 0.05F;
@@ -157,8 +159,24 @@ public class MobRendererFox extends MobRenderer<MobFox> {
 			if (entity.isFoxSitting()) {
 				tail.rotX = 0.9F;
 			} else {
-				tail.rotX = 0.6F + walkSway + idleSway;
+
+				float baseRotation;
+
+				if (entity.isFoxTamed()) {
+					// Same logic wolves use
+					float healthFactor =
+						(entity.getMaxHealth() - entity.getHealth()) * 0.04F;
+
+					baseRotation =
+						(0.30F - healthFactor) * (float)Math.PI;
+				} else {
+					// Wild fox neutral tail
+					baseRotation = (float)Math.PI / 5F;
+				}
+
+				tail.rotX = baseRotation + idleSway;
 			}
+
 		}
 	}
 	@Override

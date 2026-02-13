@@ -11,6 +11,7 @@ import net.minecraft.core.item.Items;
 import net.minecraft.core.net.packet.PacketSetRiding;
 import net.minecraft.core.util.collection.NamespaceID;
 import net.minecraft.core.util.helper.DamageType;
+import net.minecraft.core.util.helper.MathHelper;
 import net.minecraft.core.world.IVehicle;
 import net.minecraft.core.world.World;
 import net.minecraft.server.MinecraftServer;
@@ -104,7 +105,7 @@ public class MobCamel extends MobFunnyRideable {
 	private static final Random rand = new Random();
 	private static final float GRAVITY = 0.08f;
 
-	public static final float WILD_MIN_SPEED_BPS = 4.0f;
+	public static final float WILD_MIN_SPEED_BPS = 5.0f;
 	public static final float WILD_MAX_SPEED_BPS = 7.0f;
 	public static final float WILD_MIN_JUMP = 0.9f;
 	public static final float WILD_MAX_JUMP = 1.4f;
@@ -117,7 +118,7 @@ public class MobCamel extends MobFunnyRideable {
 
 		this.textureIdentifier = NamespaceID.getPermanent("funnyfauna", "camel");
 		this.setSize(1.0F, 1.8F);
-		this.rideFootSize = 1.5F;
+		this.rideFootSize = 1F;
 
 		this.mobDrops.add(new WeightedRandomLootObject(
 			FunnyFaunaItems.COARSEHIDE.getDefaultStack(), 2, 5
@@ -413,6 +414,14 @@ public class MobCamel extends MobFunnyRideable {
 
 		baby.moveTo(x, y, z, 0, 0);
 		world.entityJoinedWorld(baby);
+	}
+	@Override
+	public boolean canSpawnHere() {
+		int x = MathHelper.floor(this.x);
+		int y = MathHelper.floor(this.bb.minY);
+		int z = MathHelper.floor(this.z);
+		int id = this.world.getBlockId(x, y - 1, z);
+		return id != 0 && id != 8 && id != 9 && id != 10 && id != 11;
 	}
 
 	@Override

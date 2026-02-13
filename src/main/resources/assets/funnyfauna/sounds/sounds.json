@@ -134,7 +134,24 @@
       "mob/bird/robin_2.ogg",
       "mob/bird/robin_3.ogg",
       "mob/bird/robin_4.ogg",
-      "mob/bird/robin_5.ogg"
+      "mob/bird/robin_5.ogg",
+      "mob/bird/robin_6.ogg",
+      "mob/bird/robin_7.ogg",
+      "mob/bird/robin_8.ogg",
+      "mob/bird/robin_9.ogg"
+    ]
+  },
+  "mob.bird.bluejay": {
+    "subtitle": "subtitles.mob.bird.bluejay",
+    "sounds": [
+      "mob/bird/bluejay1.ogg",
+      "mob/bird/bluejay2.ogg",
+      "mob/bird/bluejay3.ogg",
+      "mob/bird/bluejay4.ogg",
+      "mob/bird/bluejay5.ogg",
+      "mob/bird/bluejay6.ogg",
+      "mob/bird/bluejay7.ogg",
+      "mob/bird/bluejay8.ogg"
     ]
   },
   "mob.fox.idle": {

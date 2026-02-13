@@ -19,11 +19,10 @@ import org.jetbrains.annotations.Nullable;
 import peedog.funnyfauna.entity.MobTaskrunner;
 import peedog.funnyfauna.entity.ai.controllers.LizardTask;
 import peedog.funnyfauna.entity.ai.Task;
-import peedog.funnyfauna.entity.ai.i.IFleeable;
 import peedog.funnyfauna.item.FunnyFaunaItems;
 import turniplabs.halplibe.helper.EnvironmentHelper;
 
-public class MobLizard extends MobTaskrunner implements IFleeable {
+public class MobLizard extends MobTaskrunner {
 
 	private static final int DATA_FLAGS = 16;
 	private static final int DATA_OWNER_UUID = 17;
@@ -35,10 +34,6 @@ public class MobLizard extends MobTaskrunner implements IFleeable {
 
 	private int ridingCooldown = 20;
 	private boolean wasEjected = false;
-
-	private int fleeTimer = 0;
-
-	private Entity fleeTarget;
 
 	public MobLizard(World world) {
 		super(world);
@@ -119,17 +114,14 @@ public class MobLizard extends MobTaskrunner implements IFleeable {
 	public boolean hurt(Entity attacker, int damage, DamageType type) {
 		boolean result = super.hurt(attacker, damage, type);
 
-		if (result && !world.isClientSide) {
-			if (hasTail()) {
-				setHasTail(false);
-				dropItem(FunnyFaunaItems.FOOD_LIZARDTAIL.id, 1);
-			}
-			this.setFleeTarget(attacker);
-			this.fleeTimer = 100;
+		if (result && !world.isClientSide && hasTail()) {
+			setHasTail(false);
+			dropItem(FunnyFaunaItems.FOOD_LIZARDTAIL.id, 1);
 		}
 
 		return result;
 	}
+
 
 	@Override
 	public void updateAI() {
@@ -227,6 +219,11 @@ public class MobLizard extends MobTaskrunner implements IFleeable {
 			return false;
 		}
 		return super.isPushable();
+	}
+
+	@Override
+	protected boolean canDespawn() {
+		return !this.isTamed() && super.canDespawn();
 	}
 
 	@Override
@@ -396,17 +393,4 @@ public class MobLizard extends MobTaskrunner implements IFleeable {
 		return "funnyfauna:mob.lizard.death";
 	}
 
-	@Override
-	public int getFleeTimer() { return fleeTimer; }
-
-	@Override
-	public void setFleeTimer(int ticks) { this.fleeTimer = ticks; }
-
-	@Override
-	public Entity getFleeTarget() {
-		return fleeTarget;
-	}
-
-	@Override
-	public void setFleeTarget(Entity entity) { this.fleeTarget = entity; }
 }

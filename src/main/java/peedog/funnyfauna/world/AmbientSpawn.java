@@ -9,6 +9,7 @@ import net.minecraft.core.world.biome.Biomes;
 import net.minecraft.core.world.weather.Weather;
 import net.minecraft.core.world.weather.Weathers;
 import peedog.funnyfauna.entity.bird.MobBird;
+import peedog.funnyfauna.entity.bunny.MobBunny;
 import peedog.funnyfauna.entity.cricket.EntityCricket;
 import peedog.funnyfauna.entity.tumbleweed.EntityTumbleweed;
 import peedog.funnyfauna.entity.worm.EntityWorm;
@@ -22,18 +23,22 @@ public class AmbientSpawn {
 
 	private static final int SPAWN_RADIUS = 32;
 
-	private static final int BASE_CRICKETS = 6;
-	private static final int BASE_WORMS = 5;
+	private static final int BASE_CRICKETS = 10;
+	private static final int BASE_WORMS = 10;
 	private static final int BASE_TUMBLEWEEDS = 3;
-	private static final int BASE_BIRD_FLOCKS = 4;
+	private static final int BASE_BIRD_FLOCKS = 2;
+	private static final int BASE_BUNNIES = 20;
 
-	private static final int CRICKET_CHANCE = 120;
-	private static final int WORM_CHANCE = 120;
+	private static final int CRICKET_CHANCE = 70;
+	private static final int WORM_CHANCE = 70;
 	private static final int TUMBLEWEED_CHANCE = 300;
-	private static final int BIRD_FLOCK_CHANCE = 50;
+	private static final int BIRD_FLOCK_CHANCE = 140;
+	private static final int BUNNY_CHANCE = 70;
 
-	private static final int BIRD_MIN_FLOCK = 5;
-	private static final int BIRD_MAX_FLOCK = 10;
+	private static final int BIRD_MIN_FLOCK = 4;
+	private static final int BIRD_MAX_FLOCK = 6;
+	private static final int BUNNY_MIN_GROUP = 4;
+	private static final int BUNNY_MAX_GROUP = 7;
 
 	/* ---------------------------------------- */
 
@@ -51,12 +56,11 @@ public class AmbientSpawn {
 		count(world, EntityWorm.class);
 		count(world, EntityTumbleweed.class);
 		count(world, MobBird.class);
+		count(world, MobBunny.class);
 
 		for (Player player : world.players) {
 
-			// One ambient spawn attempt per player per tick
-			if (world.rand.nextInt(3) != 0) continue;
-
+			// --- Keep the existing per-player random skip for crickets/worms/tumbleweeds/birds ---
 			double x = player.x + world.rand.nextInt(SPAWN_RADIUS * 2) - SPAWN_RADIUS;
 			double z = player.z + world.rand.nextInt(SPAWN_RADIUS * 2) - SPAWN_RADIUS;
 			int ix = MathHelper.floor(x);
@@ -70,6 +74,7 @@ public class AmbientSpawn {
 			int wormCap = Math.max(BASE_WORMS, BASE_WORMS * playerCount);
 			int tumbleweedCap = Math.max(BASE_TUMBLEWEEDS, BASE_TUMBLEWEEDS * playerCount);
 			int birdCap = Math.max(BASE_BIRD_FLOCKS * BIRD_MAX_FLOCK, BASE_BIRD_FLOCKS * BIRD_MAX_FLOCK * playerCount);
+			int bunnyCap = Math.max(BASE_BUNNIES, BASE_BUNNIES * playerCount);
 
 			/* ---------- WORMS ---------- */
 			if ((weather == Weathers.OVERWORLD_RAIN || weather == Weathers.OVERWORLD_STORM)
@@ -109,11 +114,23 @@ public class AmbientSpawn {
 				&& getCount(MobBird.class) < birdCap) {
 
 				if (world.getClosestPlayer(x, y, z, getMinPlayerDistance(new MobBird(world))) != null) continue;
-
-				// Use the ix, iz we already calculated earlier
 				spawnBirdFlock(world, x, y, z, ix, iz);
 			}
 
+			/* ---------- BUNNIES (NEW) ---------- */
+			if (world.isDaytime()
+				&& weather != Weathers.OVERWORLD_RAIN
+				&& weather != Weathers.OVERWORLD_STORM
+				&& getCount(MobBunny.class) < bunnyCap
+				&& isBunnyBiome(biome)) {
+
+				// Use the same spawn attempt chance as birds
+				if (world.rand.nextInt(BUNNY_CHANCE) == 0
+					&& world.getClosestPlayer(x, y, z, getMinPlayerDistance(new MobBunny(world))) == null) {
+
+					spawnBunnyFlock(world, x, z, ix, iz, biome);
+				}
+			}
 		}
 	}
 
@@ -223,11 +240,82 @@ public class AmbientSpawn {
 			|| biome == Biomes.OVERWORLD_GRASSLANDS;
 	}
 
+	private static void spawnBunnyFlock(World world, double x, double z, int ix, int iz, Biome biome) {
+		int flockSize = BUNNY_MIN_GROUP + world.rand.nextInt(BUNNY_MAX_GROUP - BUNNY_MIN_GROUP + 1);
+
+		// Pick ONE variant for the entire flock based on biome
+		int variant;
+		if (biome == Biomes.OVERWORLD_TUNDRA) {
+			variant = 1;
+		} else if (biome == Biomes.OVERWORLD_DESERT
+			|| biome == Biomes.OVERWORLD_OUTBACK
+			|| biome == Biomes.OVERWORLD_OUTBACK_GRASSY
+			|| biome == Biomes.OVERWORLD_CAATINGA
+			|| biome == Biomes.OVERWORLD_CAATINGA_PLAINS) {
+			variant = world.rand.nextBoolean() ? 0 : 2;
+		} else {
+			variant = 0;
+		}
+
+		for (int i = 0; i < flockSize; i++) {
+			double ox = world.rand.nextGaussian() * 4; // match birds’ spread
+			double oz = world.rand.nextGaussian() * 4;
+
+			int safeY = getSafeSpawnYForBunny(world, ix + MathHelper.floor(ox), iz + MathHelper.floor(oz));
+
+			MobBunny bunny = new MobBunny(world);
+			bunny.setSkinVariant(variant);
+			bunny.moveTo(x + ox + 0.5, safeY, z + oz + 0.5, world.rand.nextFloat() * 360F, 0);
+			world.entityJoinedWorld(bunny);
+			increment(MobBunny.class);
+		}
+	}
+
+	private static int getSafeSpawnYForBunny(World world, int x, int z) {
+		int y = world.getHeightValue(x, z);
+
+		// Scan downward to solid ground
+		while (y > 1 && world.isAirBlock(x, y - 1, z)) y--;
+
+		// Ensure clearance (bunny height ~1 block)
+		int clearance = 1;
+		boolean collision = true;
+		while (collision && y + clearance < world.getHeightBlocks()) {
+			collision = false;
+			for (int yy = 0; yy < clearance; yy++) {
+				if (!world.isAirBlock(x, y + yy, z)) {
+					collision = true;
+					break;
+				}
+			}
+			if (collision) y++;
+		}
+
+		return y;
+	}
+
+
+
+	private static boolean isBunnyBiome(Biome biome) {
+		return biome == Biomes.OVERWORLD_PLAINS
+			|| biome == Biomes.OVERWORLD_MEADOW
+			|| biome == Biomes.OVERWORLD_DESERT
+			|| biome == Biomes.OVERWORLD_OUTBACK
+			|| biome == Biomes.OVERWORLD_OUTBACK_GRASSY
+			|| biome == Biomes.OVERWORLD_CAATINGA
+			|| biome == Biomes.OVERWORLD_CAATINGA_PLAINS
+			|| biome == Biomes.OVERWORLD_GRASSLANDS
+			|| biome == Biomes.OVERWORLD_SHRUBLAND
+			|| biome == Biomes.OVERWORLD_TUNDRA
+			|| biome == Biomes.OVERWORLD_SEASONAL_FOREST
+			|| biome == Biomes.OVERWORLD_BIRCH_FOREST;
+	}
+
 	/* Distance-from-player helper */
 	private static int getMinPlayerDistance(Entity entity) {
 		if (entity instanceof EntityCricket || entity instanceof EntityWorm) {
 			return 12; // spawn closer for small critters
-		} else if (entity instanceof MobBird || entity instanceof EntityTumbleweed) {
+		} else if (entity instanceof MobBird || entity instanceof EntityTumbleweed || entity instanceof MobBunny) {
 			return 30; // keep larger mobs away from player
 		}
 		return 20; // default fallback
