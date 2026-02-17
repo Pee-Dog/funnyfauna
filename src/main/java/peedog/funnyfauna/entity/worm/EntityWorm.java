@@ -1,7 +1,9 @@
 package peedog.funnyfauna.entity.worm;
 
 import com.mojang.nbt.tags.CompoundTag;
+import net.minecraft.core.block.Block;
 import net.minecraft.core.entity.Entity;
+import net.minecraft.core.entity.Mob;
 import net.minecraft.core.entity.player.Player;
 import net.minecraft.core.item.ItemStack;
 import net.minecraft.core.item.Items;
@@ -10,7 +12,7 @@ import net.minecraft.core.world.World;
 import org.jetbrains.annotations.NotNull;
 import peedog.funnyfauna.item.FunnyFaunaItems;
 
-public class EntityWorm extends Entity {
+public class EntityWorm extends Mob {
 
 	/* ===================== Movement ===================== */
 	private static final int DATA_COLOR = 16;
@@ -19,6 +21,7 @@ public class EntityWorm extends Entity {
 
 	private int pauseTime = 0;
 	private int directionTime = 0;
+	private float climbFacing = Float.NaN;
 
 	private int animTick = 0;   // counts game ticks
 	private int animFrame = 0;  // 0, 1, 2 for 3 frames
@@ -30,7 +33,6 @@ public class EntityWorm extends Entity {
 	public EntityWorm(World world) {
 		super(world);
 		this.setSize(0.25F, 0.25F);
-		this.footSize = 1.0F; // snaps up blocks like horses
 
 		// generate color ONCE on spawn
 		if (!world.isClientSide) {
@@ -99,58 +101,98 @@ public class EntityWorm extends Entity {
 			if (nearest == null) { remove(); return; }
 		}
 
-
-		animTick++;
-
-		/* ===== Gravity ===== */
-		if (!onGround) {
-			yd -= GRAVITY;
-		}
-
-		move(xd, yd, zd);
-
-		int bx = MathHelper.floor(x);
-		int by = MathHelper.floor(y - 0.01);
-		int bz = MathHelper.floor(z);
-
-		onGround = world.isBlockNormalCube(bx, by, bz);
-		if (onGround && yd <= 0) yd = 0;
-
-		/* ===== Crawl Logic ===== */
-		if (onGround) {
-			if (pauseTime > 0) {
-				pauseTime--;
-				xd *= 0.6;
-				zd *= 0.6;
-			} else {
-				crawlContinuously();
+		if (this.horizontalCollision && this.canClimb()) {
+			// Limit upward climbing speed
+			if (this.yd > 0.04) {
+				this.yd = 0.04;
 			}
 		}
+		boolean climbing = this.horizontalCollision && this.canClimb();
 
+		if (climbing) {
+
+			// If not already locked, snap once
+			if (Float.isNaN(climbFacing)) {
+				climbFacing = Math.round(this.yRot / 90F) * 90F;
+			}
+
+			this.yRot = climbFacing;
+			this.randomYawVelocity = 0F;
+
+		} else {
+			// Not climbing anymore — unlock
+			climbFacing = Float.NaN;
+		}
+
+		animTick++;
 		updateAnimation();
 	}
 
-	private void crawlContinuously() {
-		// Occasionally pause
-		if (random.nextInt(200) == 0) {
-			pauseTime = 10 + random.nextInt(30);
+	@Override
+	protected void updateAI() {
+		this.moveStrafing = 0F; // never move sideways
+		handleWormAI();
+
+		boolean climbing = this.horizontalCollision && this.canClimb();
+
+		if (climbing) {
+			// Snap once to nearest 90° when starting to climb
+			if (Float.isNaN(climbFacing)) {
+				climbFacing = Math.round(this.yRot / 90F) * 90F;
+			}
+
+			// Lock rotation while climbing
+			this.setRot(climbFacing, this.xRot);
+		} else {
+			// Unlock rotation when off the wall
+			climbFacing = Float.NaN;
+		}
+	}
+
+	private void handleWormAI() {
+		// Pause logic
+		if (pauseTime > 0) {
+			pauseTime--;
+			this.moveForward = 0F;
 			return;
 		}
 
-		// Change direction every few seconds
-		if (directionTime-- <= 0) {
-			float angle = random.nextFloat() * (float)Math.PI * 2F;
-			xd = MathHelper.cos(angle) * CRAWL_SPEED;
-			zd = MathHelper.sin(angle) * CRAWL_SPEED;
+		// Time to pick a new direction
+		if (directionTime <= 0) {
+			// 30% chance to pause
+			if (random.nextFloat() < 0.3F) {
+				pauseTime = 40 + random.nextInt(40); // 2–4 seconds
+				return;
+			}
 
-			yRot = (float)(Math.atan2(zd, xd) * 180.0 / Math.PI) - 90.0F;
-			directionTime = 40 + random.nextInt(80);
+			// Pick a small random yaw change
+			randomYawVelocity = (random.nextFloat() - 0.5F) * 40F;
+
+			directionTime = 60 + random.nextInt(60); // 3–6 seconds
 		}
+		directionTime--;
 
-		// Maintain crawl speed
-		xd *= 0.98;
-		zd *= 0.98;
+		// Smooth rotation
+		this.yRot += randomYawVelocity * 0.2F; // scale down to prevent spinning
+
+		// Move forward slowly in direction facing
+		this.moveForward = 0.15F;
+
+		// Optionally, slowly decay randomYawVelocity for smooth turning
+		randomYawVelocity *= 0.8F;
 	}
+
+
+	@Override
+	public boolean canClimb() {
+		return true;
+	}
+	@Override
+	public boolean collidesWith(Entity entity) {
+		return false;
+	}
+
+
 
 	/* ===================== Animation ===================== */
 

@@ -5,7 +5,7 @@ import net.minecraft.core.entity.player.Player;
 import net.minecraft.core.item.Item;
 import net.minecraft.core.item.ItemStack;
 import net.minecraft.core.player.inventory.slot.Slot;
-import peedog.funnyfauna.gui.BundleContents;
+import peedog.funnyfauna.gui.satchel.BundleContents;
 
 public class ItemSatchel extends Item {
 

@@ -14,9 +14,12 @@ import peedog.funnyfauna.entity.ai.interfaces.IItemHolder;
 
 public class EntityAnt extends MobTaskrunner implements IHomeable, IItemHolder {
 
-	// Data Watcher ID for climbing state (Byte)
 	private static final int DATA_CLIMBING = 16;
 	private static final int DATA_HELD_ITEM = 20;
+
+	// How long (ticks) after being released before the ant can re-enter a hill.
+	// Set by TileEntityAntHill.releaseAnts(); counts down every server tick.
+	public int exitCooldown = 0;
 
 	public int homeX = -1;
 	public int homeY = -1;
@@ -25,8 +28,8 @@ public class EntityAnt extends MobTaskrunner implements IHomeable, IItemHolder {
 
 	public EntityAnt(World world) {
 		super(world);
-		this.setSize(0.25F, 0.25F); // Standard small bug size
-		this.footSize = 1F; // Allows stepping up full blocks automatically
+		this.setSize(0.25F, 0.25F);
+		this.footSize = 1F;
 		this.moveSpeed = 0.25F;
 		this.heartsHalvesLife = 10;
 	}
@@ -48,10 +51,13 @@ public class EntityAnt extends MobTaskrunner implements IHomeable, IItemHolder {
 		super.tick();
 
 		if (!this.world.isClientSide) {
-			// 1. Handle Wall Climbing Physics
+			// Tick down the exit cooldown so the ant can eventually re-enter
+			if (exitCooldown > 0) exitCooldown--;
+
+			// Handle wall climbing
 			this.setBesideClimbableBlock(this.horizontalCollision);
 
-			// 2. Leave Pheromone Trail ONLY when carrying item back to home
+			// Leave pheromone trail only when carrying an item home
 			if (this.getHeldItem() != null && this.hasHome && this.tickCount % 10 == 0) {
 				PheromoneManager.addScent(
 					MathHelper.floor(this.x),
@@ -62,7 +68,8 @@ public class EntityAnt extends MobTaskrunner implements IHomeable, IItemHolder {
 		}
 	}
 
-	// --- Climbing Logic (Spider Style) ---
+	// --- Climbing Logic ---
+
 	@Override
 	public boolean canClimb() {
 		return this.isBesideClimbableBlock();
@@ -74,11 +81,7 @@ public class EntityAnt extends MobTaskrunner implements IHomeable, IItemHolder {
 
 	public void setBesideClimbableBlock(boolean climbing) {
 		byte b0 = this.entityData.getByte(DATA_CLIMBING);
-		if (climbing) {
-			b0 = (byte)(b0 | 1);
-		} else {
-			b0 = (byte)(b0 & -2);
-		}
+		b0 = climbing ? (byte)(b0 | 1) : (byte)(b0 & -2);
 		this.entityData.set(DATA_CLIMBING, b0);
 	}
 
@@ -87,58 +90,27 @@ public class EntityAnt extends MobTaskrunner implements IHomeable, IItemHolder {
 		super.moveEntityWithHeading(moveStrafing, moveForward);
 
 		if (this.isBesideClimbableBlock() && (this.horizontalCollision || !this.onGround)) {
-			if (moveForward > 0.0) {
-				this.yd = 0.2; // Climb speed
-			} else {
-				this.yd = 0.0; // Hold position
-			}
+			this.yd = (moveForward > 0.0) ? 0.2 : 0.0;
 			this.xd *= 0.8;
 			this.zd *= 0.8;
 		}
 	}
 
+	// --- IHomeable ---
+
 	@Override
-	public boolean hasHome() {
-		return this.hasHome;
-	}
+	public boolean hasHome() { return this.hasHome; }
 
 	public void setHome(int x, int y, int z) {
 		this.homeX = x;
 		this.homeY = y;
 		this.homeZ = z;
 		this.hasHome = true;
-		System.out.println("Ant home set to: " + x + "," + y + "," + z);
 	}
 
-	@Override
-	public int getHomeX() {
-		return this.homeX;
-	}
-
-	@Override
-	public int getHomeY() {
-		return this.homeY;
-	}
-
-	@Override
-	public int getHomeZ() {
-		return this.homeZ;
-	}
-
-	@Override
-	public ItemStack getHeldItem() {
-		ItemStack stack = this.entityData.getItemStack(DATA_HELD_ITEM);
-		return stack;
-	}
-
-	@Override
-	public void setHeldItem(ItemStack stack) {
-		if (stack == null) {
-			this.entityData.set(DATA_HELD_ITEM, null);
-		} else {
-			this.entityData.set(DATA_HELD_ITEM, stack);
-		}
-	}
+	@Override public int getHomeX() { return this.homeX; }
+	@Override public int getHomeY() { return this.homeY; }
+	@Override public int getHomeZ() { return this.homeZ; }
 
 	public double getDistanceToHomeSq(double x, double y, double z) {
 		if (!hasHome) return Double.MAX_VALUE;
@@ -152,18 +124,30 @@ public class EntityAnt extends MobTaskrunner implements IHomeable, IItemHolder {
 		return getDistanceToHomeSq(this.x, this.y, this.z);
 	}
 
+	// --- IItemHolder ---
+
+	@Override
+	public ItemStack getHeldItem() {
+		return this.entityData.getItemStack(DATA_HELD_ITEM);
+	}
+
+	@Override
+	public void setHeldItem(ItemStack stack) {
+		this.entityData.set(DATA_HELD_ITEM, stack);
+	}
+
+	// --- NBT ---
+
 	@Override
 	public void addAdditionalSaveData(CompoundTag tag) {
 		super.addAdditionalSaveData(tag);
 		tag.putInt("age", this.time);
-
-		// Save home
 		tag.putInt("homeX", this.homeX);
 		tag.putInt("homeY", this.homeY);
 		tag.putInt("homeZ", this.homeZ);
 		tag.putBoolean("hasHome", this.hasHome);
+		tag.putInt("exitCooldown", this.exitCooldown);
 
-		// Save held item
 		ItemStack held = this.getHeldItem();
 		if (held != null && held.stackSize > 0) {
 			CompoundTag itemTag = new CompoundTag();
@@ -177,7 +161,6 @@ public class EntityAnt extends MobTaskrunner implements IHomeable, IItemHolder {
 		super.readAdditionalSaveData(tag);
 		this.time = tag.getInteger("age");
 
-		// Load home
 		if (tag.containsKey("homeX")) {
 			this.homeX = tag.getInteger("homeX");
 			this.homeY = tag.getInteger("homeY");
@@ -185,28 +168,24 @@ public class EntityAnt extends MobTaskrunner implements IHomeable, IItemHolder {
 			this.hasHome = tag.getBoolean("hasHome");
 		}
 
-		// Load held item
+		if (tag.containsKey("exitCooldown")) {
+			this.exitCooldown = tag.getInteger("exitCooldown");
+		}
+
 		if (tag.containsKey("HeldItem")) {
-			CompoundTag itemTag = tag.getCompound("HeldItem");
-			ItemStack stack = ItemStack.readItemStackFromNbt(itemTag);
+			ItemStack stack = ItemStack.readItemStackFromNbt(tag.getCompound("HeldItem"));
 			this.setHeldItem(stack);
 		}
 	}
 
 	// --- Standard Properties ---
-	@Override
-	public int getMaxHealth() {
-		return 8;
-	}
 
-	@Override
-	public boolean collidesWith(Entity entity) {
-		return false;
-	}
+	@Override public int getMaxHealth() { return 8; }
+	@Override public boolean collidesWith(Entity entity) { return false; }
 
 	@Override
 	public void spawnInit() {
-		System.out.println("Ant spawned at " + (int)this.x + "," + (int)this.y + "," + (int)this.z + " - no home yet");
+		System.out.println("Ant spawned at " + (int)this.x + "," + (int)this.y + "," + (int)this.z);
 	}
 
 	public int getAnimFrame() {
@@ -216,23 +195,10 @@ public class EntityAnt extends MobTaskrunner implements IHomeable, IItemHolder {
 
 	@Override
 	public String getEntityTexture() {
-		return getAnimFrame() == 0
-			? "funnyfauna:entity/ant/bug1"
-			: "funnyfauna:entity/ant/bug2";
+		return getAnimFrame() == 0 ? "funnyfauna:entity/ant/bug1" : "funnyfauna:entity/ant/bug2";
 	}
 
-	@Override
-	public String getLivingSound() {
-		return null;
-	}
-
-	@Override
-	public String getHurtSound() {
-		return "random.hurt";
-	}
-
-	@Override
-	public String getDeathSound() {
-		return "random.hurt";
-	}
+	@Override public String getLivingSound() { return null; }
+	@Override public String getHurtSound()   { return "random.hurt"; }
+	@Override public String getDeathSound()  { return "random.hurt"; }
 }

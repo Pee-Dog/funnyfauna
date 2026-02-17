@@ -1,4 +1,4 @@
-package peedog.funnyfauna.gui;
+package peedog.funnyfauna.gui.satchel;
 
 import com.mojang.nbt.tags.CompoundTag;
 import net.minecraft.core.item.ItemStack;

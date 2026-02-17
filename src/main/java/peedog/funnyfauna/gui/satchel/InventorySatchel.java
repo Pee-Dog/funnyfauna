@@ -1,4 +1,4 @@
-package peedog.funnyfauna.gui;
+package peedog.funnyfauna.gui.satchel;
 
 import net.minecraft.core.entity.player.Player;
 import net.minecraft.core.item.ItemStack;

@@ -16,100 +16,185 @@ import java.util.List;
 
 public class TileEntityAntHill extends TileEntity implements Container {
 
-	// Storage for items collected by ants
-	private ItemStack[] storedItems = new ItemStack[27]; // 3 rows like a chest
-
-	// Storage for ant data (NBT tags)
+	private ItemStack[] storedItems = new ItemStack[27];
 	private List<CompoundTag> storedAnts = new ArrayList<>();
 
-	// Maximum ants that can be stored
 	private static final int MAX_ANTS = 20;
 
-	// Timer for checking nearby ants
+	// How long a released ant must wait before it can re-enter (in ticks)
+	private static final int EXIT_COOLDOWN_TICKS = 200;
+
 	private int checkTimer = 0;
 
 	@Override
 	public void tick() {
 		super.tick();
-
 		if (this.worldObj == null || this.worldObj.isClientSide) return;
 
-		// Check for nearby ants every second (20 ticks)
+		// Check for nearby ants once per second
 		checkTimer++;
 		if (checkTimer >= 20) {
 			checkTimer = 0;
 			checkForNearbyAnts();
 		}
+
+		// Randomly release one ant
+		if (getStoredAntCount() > 0 && worldObj.rand.nextInt(100) == 0) {
+			releaseAnts(worldObj, 1);
+		}
 	}
 
 	private void checkForNearbyAnts() {
-		// Large search radius to claim homeless ants and store returning ants
 		AABB searchBox = AABB.getTemporaryBB(
 			this.x, this.y, this.z,
 			this.x + 1, this.y + 1, this.z + 1
 		).grow(16.0, 6.0, 16.0);
 
 		List<EntityAnt> nearbyAnts = worldObj.getEntitiesWithinAABB(EntityAnt.class, searchBox);
-
 		for (EntityAnt ant : nearbyAnts) {
 			handleNearbyAnt(ant);
 		}
 	}
 
 	private void handleNearbyAnt(EntityAnt ant) {
-		double distanceSq = ant.getDistanceToHomeSq(this.x, this.y, this.z);
+		double dx = (this.x + 0.5) - ant.x;
+		double dy = (this.y + 0.5) - ant.y;
+		double dz = (this.z + 0.5) - ant.z;
+		double distanceSq = dx * dx + dy * dy + dz * dz;
 
-		// If ant doesn't have a home and is within 8 blocks, claim it
+		// Claim homeless ants that wander close enough
 		if (!ant.hasHome()) {
-			if (this.getStoredAntCount() < MAX_ANTS && distanceSq < 64.0) { // 8^2 = 64
+			if (this.getStoredAntCount() < MAX_ANTS && distanceSq < 64.0) {
 				ant.setHome(this.x, this.y, this.z);
-				System.out.println("Ant hill claiming homeless ant at distance " + Math.sqrt(distanceSq));
 			}
 			return;
 		}
 
-		// Only store ants that have this hill as their home
-		if (ant.getHomeX() == this.x && ant.getHomeY() == this.y && ant.getHomeZ() == this.z) {
-			// Check if ant is close enough to enter (within 2 blocks)
-			if (distanceSq < 4.0) { // 2^2 = 4
-				// Try to store the ant
-				if (this.storeAnt(ant)) {
-					System.out.println("Stored ant in ant hill!");
-				}
-			}
+		// Only absorb ants whose home is this hill
+		if (ant.getHomeX() != this.x || ant.getHomeY() != this.y || ant.getHomeZ() != this.z) return;
+
+		// Must be close AND past the exit cooldown
+		if (distanceSq < 4.0) {
+			storeAnt(ant);
 		}
 	}
 
-	// --- Container Interface for Items ---
+	// --- Ant Storage ---
 
-	@Override
-	public int getContainerSize() {
-		return storedItems.length;
+	/**
+	 * Attempts to store an ant. Returns false if the ant is still in its exit cooldown
+	 * or the hill is full.
+	 */
+	public boolean storeAnt(EntityAnt ant) {
+		if (storedAnts.size() >= MAX_ANTS) return false;
+
+		// Don't absorb ants that were just released
+		if (ant.exitCooldown > 0) return false;
+
+		// Deposit any carried item into the hill's inventory
+		ItemStack heldItem = ant.getHeldItem();
+		if (heldItem != null && heldItem.stackSize > 0) {
+			addItemToInventory(heldItem.copy());
+			ant.setHeldItem(null);
+		}
+
+		CompoundTag antData = new CompoundTag();
+		ant.addAdditionalSaveData(antData);
+		storedAnts.add(antData);
+
+		ant.removed = true;
+		this.setChanged();
+		return true;
 	}
 
-	@Override
-	public @Nullable ItemStack getItem(int index) {
-		return storedItems[index];
+	/** Releases all stored ants. */
+	public void releaseAnts(World world) {
+		if (world.isClientSide) return;
+
+		for (CompoundTag antData : storedAnts) {
+			spawnAnt(world, antData);
+		}
+		storedAnts.clear();
+		this.setChanged();
 	}
+
+	/** Releases up to {@code count} stored ants. */
+	public void releaseAnts(World world, int count) {
+		if (world.isClientSide) return;
+
+		int toRelease = Math.min(count, storedAnts.size());
+		for (int i = 0; i < toRelease; i++) {
+			spawnAnt(world, storedAnts.remove(0));
+		}
+		this.setChanged();
+	}
+
+	private void spawnAnt(World world, CompoundTag antData) {
+		EntityAnt ant = new EntityAnt(world);
+		ant.readAdditionalSaveData(antData);
+
+		double spawnX = this.x + 0.5 + (world.rand.nextDouble() - 0.5) * 2.0;
+		double spawnY = this.y + 1.0;
+		double spawnZ = this.z + 0.5 + (world.rand.nextDouble() - 0.5) * 2.0;
+
+		ant.setPos(spawnX, spawnY, spawnZ);
+		ant.setHome(this.x, this.y, this.z);
+
+		// Give the ant time to walk away before it can re-enter
+		ant.exitCooldown = EXIT_COOLDOWN_TICKS;
+
+		world.entityJoinedWorld(ant);
+	}
+
+	// --- Item Helpers ---
+
+	private void addItemToInventory(ItemStack stack) {
+		if (stack == null || stack.stackSize <= 0) return;
+
+		// Try to merge with existing stacks first
+		for (int i = 0; i < storedItems.length && stack.stackSize > 0; i++) {
+			if (storedItems[i] != null && storedItems[i].canStackWith(stack)) {
+				int space = Math.min(getMaxStackSize() - storedItems[i].stackSize, stack.stackSize);
+				storedItems[i].stackSize += space;
+				stack.stackSize -= space;
+			}
+		}
+
+		// Fill empty slots
+		for (int i = 0; i < storedItems.length && stack.stackSize > 0; i++) {
+			if (storedItems[i] == null) {
+				storedItems[i] = stack.copy();
+				stack.stackSize = 0;
+				break;
+			}
+		}
+
+		// Drop overflow
+		if (stack.stackSize > 0) {
+			worldObj.dropItem(x, y + 1, z, stack);
+		}
+	}
+
+	// --- Container Interface ---
+
+	@Override public int getContainerSize() { return storedItems.length; }
+	@Override public @Nullable ItemStack getItem(int index) { return storedItems[index]; }
 
 	@Override
 	public @Nullable ItemStack removeItem(int index, int takeAmount) {
-		if (storedItems[index] != null) {
-			if (storedItems[index].stackSize <= takeAmount) {
-				ItemStack itemstack = storedItems[index];
-				storedItems[index] = null;
-				this.setChanged();
-				return itemstack;
-			} else {
-				ItemStack itemstack1 = storedItems[index].splitStack(takeAmount);
-				if (storedItems[index].stackSize <= 0) {
-					storedItems[index] = null;
-				}
-				this.setChanged();
-				return itemstack1;
-			}
+		if (storedItems[index] == null) return null;
+
+		if (storedItems[index].stackSize <= takeAmount) {
+			ItemStack result = storedItems[index];
+			storedItems[index] = null;
+			this.setChanged();
+			return result;
 		}
-		return null;
+
+		ItemStack result = storedItems[index].splitStack(takeAmount);
+		if (storedItems[index].stackSize <= 0) storedItems[index] = null;
+		this.setChanged();
+		return result;
 	}
 
 	@Override
@@ -121,190 +206,42 @@ public class TileEntityAntHill extends TileEntity implements Container {
 		this.setChanged();
 	}
 
-	@Override
-	public String getNameTranslationKey() {
-		return "container.anthill.name";
-	}
-
-	@Override
-	public int getMaxStackSize() {
-		return 64;
-	}
+	@Override public String getNameTranslationKey() { return "container.anthill.name"; }
+	@Override public int getMaxStackSize() { return 64; }
 
 	@Override
 	public boolean stillValid(Player player) {
 		if (this.worldObj != null && this.worldObj.getTileEntity(this.x, this.y, this.z) == this) {
-			return player.distanceToSqr(
-				(double)this.x + 0.5,
-				(double)this.y + 0.5,
-				(double)this.z + 0.5
-			) <= 64.0;
+			return player.distanceToSqr(this.x + 0.5, this.y + 0.5, this.z + 0.5) <= 64.0;
 		}
 		return false;
 	}
 
-	@Override
-	public void sortContainer() {
-		// Sort inventory if needed
-	}
+	@Override public void sortContainer() {}
 
-	// --- Ant Storage Methods ---
+	public int getStoredAntCount() { return storedAnts.size(); }
+	public int getMaxAnts() { return MAX_ANTS; }
 
-	/**
-	 * Attempts to store an ant in the ant hill.
-	 * @param ant The ant to store
-	 * @return true if successfully stored, false if ant hill is full
-	 */
-	public boolean storeAnt(EntityAnt ant) {
-		if (storedAnts.size() >= MAX_ANTS) {
-			return false; // Ant hill is full
-		}
-
-		// Save ant data to NBT
-		CompoundTag antData = new CompoundTag();
-		ant.addAdditionalSaveData(antData);
-
-		// Store the item the ant was carrying (if any)
-		ItemStack heldItem = ant.getHeldItem();
-		if (heldItem != null && heldItem.stackSize > 0) {
-			// Try to add to inventory
-			addItemToInventory(heldItem.copy());
-			ant.setHeldItem(null); // Clear the ant's held item
-		}
-
-		// Add ant to storage
-		storedAnts.add(antData);
-
-		// Remove ant from world
-		ant.removed = true;
-
-		this.setChanged();
-		return true;
-	}
-
-	/**
-	 * Releases all stored ants back into the world
-	 */
-	public void releaseAnts(World world) {
-		if (world.isClientSide) return;
-
-		for (CompoundTag antData : storedAnts) {
-			// Create new ant entity
-			EntityAnt ant = new EntityAnt(world);
-
-			// Restore ant data
-			ant.readAdditionalSaveData(antData);
-
-			// Spawn near the ant hill with slight randomness
-			double spawnX = this.x + 0.5 + (world.rand.nextDouble() - 0.5) * 2.0;
-			double spawnY = this.y + 1.0;
-			double spawnZ = this.z + 0.5 + (world.rand.nextDouble() - 0.5) * 2.0;
-
-			ant.setPos(spawnX, spawnY, spawnZ);
-
-			// Make sure home is still set to this ant hill
-			ant.setHome(this.x, this.y, this.z);
-
-			world.entityJoinedWorld(ant);
-		}
-
-		storedAnts.clear();
-		this.setChanged();
-	}
-
-	/**
-	 * Releases a specific number of ants
-	 */
-	public void releaseAnts(World world, int count) {
-		if (world.isClientSide) return;
-
-		int toRelease = Math.min(count, storedAnts.size());
-
-		for (int i = 0; i < toRelease; i++) {
-			CompoundTag antData = storedAnts.remove(0);
-
-			EntityAnt ant = new EntityAnt(world);
-			ant.readAdditionalSaveData(antData);
-
-			double spawnX = this.x + 0.5 + (world.rand.nextDouble() - 0.5) * 2.0;
-			double spawnY = this.y + 1.0;
-			double spawnZ = this.z + 0.5 + (world.rand.nextDouble() - 0.5) * 2.0;
-
-			ant.setPos(spawnX, spawnY, spawnZ);
-			ant.setHome(this.x, this.y, this.z);
-
-			world.entityJoinedWorld(ant);
-		}
-
-		this.setChanged();
-	}
-
-	/**
-	 * Helper method to add an item to the first available slot
-	 */
-	private void addItemToInventory(ItemStack stack) {
-		if (stack == null || stack.stackSize <= 0) return;
-
-		// First pass: Try to stack with existing items
-		for (int i = 0; i < storedItems.length && stack.stackSize > 0; i++) {
-			if (storedItems[i] != null && storedItems[i].canStackWith(stack)) {
-				int space = Math.min(
-					getMaxStackSize() - storedItems[i].stackSize,
-					stack.stackSize
-				);
-				storedItems[i].stackSize += space;
-				stack.stackSize -= space;
-			}
-		}
-
-		// Second pass: Fill empty slots
-		for (int i = 0; i < storedItems.length && stack.stackSize > 0; i++) {
-			if (storedItems[i] == null) {
-				storedItems[i] = stack.copy();
-				stack.stackSize = 0;
-				break;
-			}
-		}
-
-		// If there's still items left, drop them in the world
-		if (stack.stackSize > 0) {
-			worldObj.dropItem(x, y + 1, z, stack);
-		}
-	}
-
-	public int getStoredAntCount() {
-		return storedAnts.size();
-	}
-
-	public int getMaxAnts() {
-		return MAX_ANTS;
-	}
-
-	// --- NBT Save/Load ---
+	// --- NBT ---
 
 	@Override
 	public void readFromNBT(CompoundTag tag) {
 		super.readFromNBT(tag);
 
-		// Load items
 		ListTag itemList = tag.getList("Items");
 		storedItems = new ItemStack[getContainerSize()];
-
 		for (int i = 0; i < itemList.tagCount(); i++) {
 			CompoundTag itemTag = (CompoundTag) itemList.tagAt(i);
 			int slot = itemTag.getByte("Slot") & 255;
-			if (slot >= 0 && slot < storedItems.length) {
+			if (slot < storedItems.length) {
 				storedItems[slot] = ItemStack.readItemStackFromNbt(itemTag);
 			}
 		}
 
-		// Load ants
 		ListTag antList = tag.getList("Ants");
 		storedAnts.clear();
-
 		for (int i = 0; i < antList.tagCount(); i++) {
-			CompoundTag antTag = (CompoundTag) antList.tagAt(i);
-			storedAnts.add(antTag);
+			storedAnts.add((CompoundTag) antList.tagAt(i));
 		}
 	}
 
@@ -312,7 +249,6 @@ public class TileEntityAntHill extends TileEntity implements Container {
 	public void writeToNBT(CompoundTag tag) {
 		super.writeToNBT(tag);
 
-		// Save items
 		ListTag itemList = new ListTag();
 		for (int i = 0; i < storedItems.length; i++) {
 			if (storedItems[i] != null) {
@@ -324,7 +260,6 @@ public class TileEntityAntHill extends TileEntity implements Container {
 		}
 		tag.put("Items", itemList);
 
-		// Save ants
 		ListTag antList = new ListTag();
 		for (CompoundTag antTag : storedAnts) {
 			antList.addTag(antTag);

@@ -11,6 +11,7 @@ import peedog.funnyfauna.entity.cricket.EntityCricket;
 import peedog.funnyfauna.entity.emu.MobEmu;
 import peedog.funnyfauna.entity.fox.MobFox;
 import peedog.funnyfauna.entity.horse.MobHorse;
+import peedog.funnyfauna.entity.lilspider.EntityLilSpider;
 import peedog.funnyfauna.entity.lizard.MobLizard;
 import peedog.funnyfauna.entity.mouse.MobMouse;
 import peedog.funnyfauna.entity.penguin.MobPenguin;
@@ -50,6 +51,7 @@ public class FunnyFaunaEntities {
 		EntityHelper.createEntity(EntityTumbleweed.class, NamespaceID.getPermanent(MOD_ID, "tumbleweed"), entityKey("tumbleweed"));
 		EntityHelper.createEntity(EntityCricket.class, NamespaceID.getPermanent(MOD_ID, "cricket"), entityKey("cricket"));
 		EntityHelper.createEntity(EntityWorm.class, NamespaceID.getPermanent(MOD_ID, "worm"), entityKey("worm"));
+		EntityHelper.createEntity(EntityLilSpider.class, NamespaceID.getPermanent(MOD_ID, "lilspider"), entityKey("lilspider"));
 		EntityHelper.createEntity(MobBoar.class, NamespaceID.getPermanent(MOD_ID, "boar"), entityKey("boar"));
 		EntityHelper.createEntity(MobBird.class, NamespaceID.getPermanent(MOD_ID, "bird"), entityKey("bird"));
 		EntityHelper.createEntity(MobFox.class, NamespaceID.getPermanent(MOD_ID, "fox"), entityKey("fox"));

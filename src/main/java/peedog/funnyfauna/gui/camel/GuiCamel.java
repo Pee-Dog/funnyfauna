@@ -1,6 +1,5 @@
-package peedog.funnyfauna.gui;
+package peedog.funnyfauna.gui.camel;
 
-import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.container.ScreenContainerAbstract;
 import net.minecraft.core.entity.player.Player;
 import org.lwjgl.opengl.GL11;

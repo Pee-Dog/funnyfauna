@@ -1,4 +1,4 @@
-package peedog.funnyfauna.gui;
+package peedog.funnyfauna.gui.camel;
 
 import net.minecraft.core.InventoryAction;
 import net.minecraft.core.entity.player.Player;

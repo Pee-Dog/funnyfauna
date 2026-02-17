@@ -9,22 +9,17 @@ import peedog.funnyfauna.entity.MobTaskrunner;
 import peedog.funnyfauna.entity.ai.Task;
 import peedog.funnyfauna.entity.ai.interfaces.IFlockable;
 import peedog.funnyfauna.entity.ai.interfaces.IFlyable;
+import peedog.funnyfauna.entity.bird.MobBird;
 
 /**
- * Handles solo flight when a mob is specifically looking for a perch.
- * This is a focused flight mode where the mob searches for leaves or suitable perching spots.
- * Uses vertical-first approach: rise to safe height, then move horizontally.
+ * Handles solo flight for short-distance perch seeking.
+ * This is a smooth, direct flight mode where the bird flies to its leap target.
+ * Much faster and more natural than the old vertical-first approach.
  */
 public class FlightSoloPerchTask<T extends MobTaskrunner & IFlyable> extends Task<T> {
-	private static final int SEARCH_RADIUS = 2;
-	private static final int SEARCH_HEIGHT = 8;
-	private static final double BIRD_HEIGHT = 0.5;
-	private static final double BUFFER = 0.2;
-
-	private ServerBlockPos3D perchTarget = null;
-	private int searchCooldown = 0;
+	private static final int MAX_SOLO_FLIGHT_TIME = 100; // 5 seconds max
 	private int headHitTicks = 0;
-	private static final int MAX_HEAD_HIT_TICKS = 40;
+	private static final int MAX_HEAD_HIT_TICKS = 20;
 
 	public FlightSoloPerchTask(T mob) {
 		super(mob);
@@ -32,173 +27,139 @@ public class FlightSoloPerchTask<T extends MobTaskrunner & IFlyable> extends Tas
 
 	@Override
 	protected void onStart() {
-		perchTarget = null;
-		searchCooldown = 0;
 		headHitTicks = 0;
+
+		// Initial upward boost so flight looks natural even on same-level targets
+		mob.yd = 0.2;
 	}
 
 	@Override
 	protected Task onTick() {
+		// Safety: abort if solo flight takes too long
+		if (mob.getFlightTime() > MAX_SOLO_FLIGHT_TIME) {
+			abortSoloFlight();
+			return null;
+		}
+
 		// Handle ceiling collision
 		if (isHeadBlocked()) {
 			headHitTicks++;
-
 			if (mob.yd > 0) mob.yd = 0;
 
 			if (!trySlideToAir() || headHitTicks > MAX_HEAD_HIT_TICKS) {
-				// Abort perch attempt and land
-				abortPerchSeek();
+				abortSoloFlight();
 				return null;
 			}
 		} else {
 			headHitTicks = 0;
 		}
 
-		// Search for perch periodically
-		if (--searchCooldown <= 0) {
-			searchCooldown = 40; // Search every 2 seconds
-			if (perchTarget == null) {
-				perchTarget = findNearbyPerch();
-			}
+		// Get leap target from MobBird
+		ServerBlockPos3D target = null;
+		if (mob instanceof MobBird) {
+			target = ((MobBird) mob).getLeapTarget();
 		}
 
-		if (perchTarget != null) {
-			// Move toward perch using vertical-first approach
-			moveTowardPerch();
+		if (target == null) {
+			// No target - shouldn't happen, but abort gracefully
+			abortSoloFlight();
+			return null;
+		}
 
-			// Check if we've reached the perch
-			if (isAtPerch()) {
-				// Successfully reached perch - land here
-				completeLanding();
-				return null;
-			}
-		} else {
-			// No perch found - wander while searching
-			wanderWhileSearching();
+		// Smooth, direct flight to target
+		flyToTarget(target);
+
+		// Check if we've reached the target
+		if (isAtTarget(target)) {
+			completeLanding(target);
+			return null;
 		}
 
 		return null;
 	}
 
-	private void moveTowardPerch() {
-		double targetX = perchTarget.x + 0.5;
-		double targetZ = perchTarget.z + 0.5;
+	private void flyToTarget(ServerBlockPos3D target) {
+		double targetX = target.x + 0.5;
+		double targetY = target.y + 1.2; // Slightly above the block
+		double targetZ = target.z + 0.5;
 
-		// Determine safe hover height: must be above any blocks above the perch
-		int perchX = MathHelper.floor(targetX);
-		int perchY = perchTarget.y;
-		int perchZ = MathHelper.floor(targetZ);
+		double dx = targetX - mob.x;
+		double dy = targetY - mob.y;
+		double dz = targetZ - mob.z;
 
-		int safeY = perchY + 1; // base hover 1 block above leaf
-		while (!mob.world.isAirBlock(perchX, safeY, perchZ) && safeY < mob.world.getHeightBlocks()) {
-			safeY++; // rise until air
+		double dist3D = Math.sqrt(dx * dx + dy * dy + dz * dz);
+
+		if (dist3D < 0.1) return; // Already there
+
+		// Direct approach - fly straight toward target
+		// Speed increases as we get closer for a smooth landing
+		double speed = Math.min(0.25, dist3D * 0.15);
+
+		mob.xd = (dx / dist3D) * speed;
+		mob.yd = (dy / dist3D) * speed;
+		mob.zd = (dz / dist3D) * speed;
+
+		// Update rotation to face target
+		double horizontalDist = Math.sqrt(dx * dx + dz * dz);
+		if (horizontalDist > 0.01) {
+			double desiredYaw = Math.toDegrees(Math.atan2(dz, dx)) - 90.0;
+			mob.yRot = updateRotation(mob.yRot, (float)desiredYaw, 20.0F);
 		}
 
-		double targetY = safeY + BUFFER;
-
-		// VERTICAL-FIRST APPROACH:
-		// First, rise to targetY if not high enough
-		if (mob.y < targetY) {
-			mob.yd = Math.min(0.15, targetY - mob.y); // controlled ascent
-			mob.xd = 0;
-			mob.zd = 0;
-		} else {
-			// Horizontal motion once safely above perch
-			double dx = targetX - mob.x;
-			double dz = targetZ - mob.z;
-
-			mob.xd = dx * 0.1;
-			mob.zd = dz * 0.1;
-
-			// Clamp horizontal speed
-			double horizontalSpeed = Math.sqrt(mob.xd * mob.xd + mob.zd * mob.zd);
-			double maxSpeed = 0.1;
-			if (horizontalSpeed > maxSpeed) {
-				mob.xd = mob.xd / horizontalSpeed * maxSpeed;
-				mob.zd = mob.zd / horizontalSpeed * maxSpeed;
-			}
-
-			// Minor vertical adjustment
-			double dy = targetY - mob.y;
-			mob.yd = MathHelper.clamp(dy * 0.05, -0.05, 0.05);
-		}
+		// Gentle damping for smooth approach
+		mob.xd *= 0.95;
+		mob.yd *= 0.95;
+		mob.zd *= 0.95;
 	}
 
-	private boolean isAtPerch() {
-		if (perchTarget == null) return false;
+	private boolean isAtTarget(ServerBlockPos3D target) {
+		if (target == null) return false;
 
-		double targetX = perchTarget.x + 0.5;
-		double targetZ = perchTarget.z + 0.5;
+		double targetX = target.x + 0.5;
+		double targetY = target.y + 1.0;
+		double targetZ = target.z + 0.5;
 
-		int safeY = perchTarget.y + 1;
-		while (!mob.world.isAirBlock(perchTarget.x, safeY, perchTarget.z) && safeY < mob.world.getHeightBlocks()) {
-			safeY++;
-		}
-		double targetY = safeY + BUFFER;
+		double dx = targetX - mob.x;
+		double dy = targetY - mob.y;
+		double dz = targetZ - mob.z;
 
-		double distXZ = Math.sqrt(Math.pow(targetX - mob.x, 2) + Math.pow(targetZ - mob.z, 2));
-		double distY = Math.abs(targetY - mob.y);
-
-		return distXZ < 0.15 && distY < 0.05;
+		double dist = Math.sqrt(dx * dx + dy * dy + dz * dz);
+		return dist < 0.3; // Close enough to land
 	}
 
-	private void completeLanding() {
+	private void completeLanding(ServerBlockPos3D target) {
+		// Land successfully
 		mob.setFlying(false);
 		if (mob instanceof IFlockable) {
 			((IFlockable) mob).setSoloFlying(false);
 		}
+
+		// Clear leap target
+		if (mob instanceof MobBird) {
+			((MobBird) mob).clearLeapTarget();
+		}
+
+		// Position precisely on target
+		mob.x = target.x + 0.5;
+		mob.y = target.y + 1.0;
+		mob.z = target.z + 0.5;
 		mob.xd = mob.yd = mob.zd = 0;
-		perchTarget = null;
+
+		mob.setPos(mob.x, mob.y, mob.z);
 	}
 
-	private void abortPerchSeek() {
+	private void abortSoloFlight() {
 		if (mob instanceof IFlockable) {
 			((IFlockable) mob).setSoloFlying(false);
 		}
 		mob.setFlying(false);
 		mob.yd = -0.15;
-		headHitTicks = 0;
-		perchTarget = null;
-	}
 
-	private ServerBlockPos3D findNearbyPerch() {
-		int bx = MathHelper.floor(mob.x);
-		int by = MathHelper.floor(mob.y);
-		int bz = MathHelper.floor(mob.z);
-
-		// Search for leaves above current position
-		for (int dy = 1; dy <= SEARCH_HEIGHT; dy++) {
-			for (int dx = -SEARCH_RADIUS; dx <= SEARCH_RADIUS; dx++) {
-				for (int dz = -SEARCH_RADIUS; dz <= SEARCH_RADIUS; dz++) {
-					int checkY = by + dy;
-					int checkX = bx + dx;
-					int checkZ = bz + dz;
-
-					int id = mob.world.getBlockId(checkX, checkY, checkZ);
-					if (id != 0) {
-						Block block = Blocks.blocksList[id];
-						if (block != null && block.getMaterial() == Material.leaves) {
-							// Found leaves - return position on top
-							return new ServerBlockPos3D(checkX, checkY, checkZ);
-						}
-					}
-				}
-			}
+		if (mob instanceof MobBird) {
+			((MobBird) mob).clearLeapTarget();
 		}
 
-		return null;
-	}
-
-	private void wanderWhileSearching() {
-		// Gentle wandering while searching
-		mob.xd += (random.nextDouble() - 0.5) * 0.02;
-		mob.yd += (random.nextDouble() - 0.5) * 0.01;
-		mob.zd += (random.nextDouble() - 0.5) * 0.02;
-
-		// Damping
-		mob.xd *= 0.95;
-		mob.yd *= 0.95;
-		mob.zd *= 0.95;
+		headHitTicks = 0;
 	}
 
 	private boolean isHeadBlocked() {
@@ -215,10 +176,10 @@ public class FlightSoloPerchTask<T extends MobTaskrunner & IFlyable> extends Tas
 
 	private boolean trySlideToAir() {
 		double[][] offsets = {
-			{ 0.4,  0.0},
-			{-0.4,  0.0},
-			{ 0.0,  0.4},
-			{ 0.0, -0.4}
+			{ 0.3,  0.0},
+			{-0.3,  0.0},
+			{ 0.0,  0.3},
+			{ 0.0, -0.3}
 		};
 
 		for (double[] o : offsets) {
@@ -227,17 +188,28 @@ public class FlightSoloPerchTask<T extends MobTaskrunner & IFlyable> extends Tas
 			int az = MathHelper.floor(mob.z + o[1]);
 
 			if (mob.world.isAirBlock(ax, ay, az)) {
-				mob.xd += o[0] * 0.2;
-				mob.zd += o[1] * 0.2;
+				mob.xd += o[0] * 0.15;
+				mob.zd += o[1] * 0.15;
 				return true;
 			}
 		}
 		return false;
 	}
 
+	private float updateRotation(float current, float target, float maxChange) {
+		float diff = target - current;
+		while (diff < -180.0F) diff += 360.0F;
+		while (diff >= 180.0F) diff -= 360.0F;
+		if (diff > maxChange) diff = maxChange;
+		if (diff < -maxChange) diff = -maxChange;
+		return current + diff;
+	}
+
 	@Override
 	protected void onStop(Task interruptTask) {
-		perchTarget = null;
+		if (mob instanceof MobBird) {
+			((MobBird) mob).clearLeapTarget();
+		}
 	}
 
 	@Override

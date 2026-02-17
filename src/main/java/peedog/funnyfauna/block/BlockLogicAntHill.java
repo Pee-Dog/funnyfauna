@@ -69,37 +69,39 @@ public class BlockLogicAntHill extends BlockLogic {
 	/**
 	 * Handle an ant that is near the ant hill
 	 */
+	// Inside BlockLogicAntHill.java
 	private void handleAntNearAntHill(World world, int x, int y, int z, EntityAnt ant) {
-		// Get the tile entity
 		TileEntity tileEntity = world.getTileEntity(x, y, z);
 		if (!(tileEntity instanceof TileEntityAntHill)) return;
 
 		TileEntityAntHill antHill = (TileEntityAntHill) tileEntity;
 
-		// Calculate distance
-		double distanceSq = ant.getDistanceToHomeSq(x, y, z);
+		// FIX: Physical distance to the block
+		double dx = (x + 0.5) - ant.x;
+		double dy = (y + 0.5) - ant.y;
+		double dz = (z + 0.5) - ant.z;
+		double distanceSq = dx * dx + dy * dy + dz * dz;
 
-		// If ant doesn't have a home and is within 8 blocks, set this ant hill as its home
 		if (!ant.hasHome()) {
-			if (antHill.getStoredAntCount() < antHill.getMaxAnts() && distanceSq < 64.0) { // 8^2 = 64
+			if (antHill.getStoredAntCount() < antHill.getMaxAnts() && distanceSq < 64.0) {
 				ant.setHome(x, y, z);
-				System.out.println("Ant hill claiming homeless ant at distance " + Math.sqrt(distanceSq));
 			}
-			return; // Let the ant go out and forage
+			return;
 		}
 
-		// Only store ants that have this block as their home
 		if (ant.getHomeX() == x && ant.getHomeY() == y && ant.getHomeZ() == z) {
-			// Check if ant is close enough to enter (within 2 blocks)
-			if (distanceSq < 4.0) { // 2^2 = 4
-				// Try to store the ant
+			// ADD THIS LOG
+			if (distanceSq < 10.0) { // Log when they get close
+				System.out.println("[Hill Debug] Home-bound ant is nearby. Distance: " + Math.sqrt(distanceSq));
+			}
+
+			if (distanceSq < 4.0) {
 				if (antHill.storeAnt(ant)) {
-					System.out.println("Stored ant in ant hill!");
+					System.out.println("[Hill Debug] SUCCESS: Ant entered the hill!");
 				}
 			}
 		}
 	}
-
 	/**
 	 * Called when an entity collides with this block
 	 */
@@ -123,33 +125,19 @@ public class BlockLogicAntHill extends BlockLogic {
 	public void updateTick(World world, int x, int y, int z, Random rand) {
 		if (world.isClientSide) return;
 
-		// Get tile entity
 		TileEntity tileEntity = world.getTileEntity(x, y, z);
 		if (!(tileEntity instanceof TileEntityAntHill)) return;
 
-		TileEntityAntHill antHill = (TileEntityAntHill) tileEntity;
-
-		// Always search for nearby ants - we need to claim homeless ones
-		// and store ants returning home
-
-		// Large search radius to claim homeless ants
-		AABB searchBox = AABB.getTemporaryBB(
-			x, y, z,
-			x + 1, y + 1, z + 1
-		).grow(16.0, 6.0, 16.0); // Very large radius - 16 blocks
-
+		// Search radius of 16 blocks to find homeless ants
+		AABB searchBox = AABB.getTemporaryBB(x, y, z, x + 1, y + 1, z + 1).grow(16.0, 6.0, 16.0);
 		List<EntityAnt> nearbyAnts = world.getEntitiesWithinAABB(EntityAnt.class, searchBox);
-
-		if (nearbyAnts.size() > 0) {
-			System.out.println("Ant hill tick: Found " + nearbyAnts.size() + " ants nearby");
-		}
 
 		for (EntityAnt ant : nearbyAnts) {
 			handleAntNearAntHill(world, x, y, z, ant);
 		}
 
-		// Schedule next tick
-		world.scheduleBlockUpdate(x, y, z, this.id(), 20); // Check every second
+		// RECURSIVE TICK: Keep the hill "alive" every second
+		world.scheduleBlockUpdate(x, y, z, this.id(), 20);
 	}
 
 	/**

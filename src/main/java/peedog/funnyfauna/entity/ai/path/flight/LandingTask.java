@@ -8,18 +8,20 @@ import peedog.funnyfauna.entity.ai.interfaces.IFlyable;
 
 /**
  * Handles the controlled landing descent when a flying mob is coming down to perch or rest.
- * Fix Issue 4: Smooth descent with gradual transition and reduced jittering.
+ * Updated to provide a seamless, realistic flight-to-perch transition using 3D vector seeking.
  */
 public class LandingTask<T extends MobTaskrunner & IFlyable> extends Task<T> {
-	private static final double HORIZONTAL_SPEED = 0.15;
-	private static final double MAX_DESCENT_SPEED = 0.25;
-	private static final double MIN_DESCENT_SPEED = 0.05;
-
-	// Transition phase for smooth entry into landing
-	private static final int TRANSITION_TICKS = 20; // 1 second transition
-	private int landingTicks = 0;
 
 	private final FlightTask<T> flightTask;
+
+	// Tuning constants for natural flight
+	private static final double APPROACH_SPEED_FAR = 0.55;  // Fast approach (swooping in)
+	private static final double APPROACH_SPEED_NEAR = 0.25; // Braking phase
+	private static final double APPROACH_SPEED_FINAL = 0.1; // Precision landing
+
+	// How quickly the bird adjusts its velocity (Lower = heavy/smooth, Higher = snappy/twitchy)
+	// 0.2 is a good balance for small birds
+	private static final double AGILITY = 0.2;
 
 	public LandingTask(T mob, FlightTask<T> flightTask) {
 		super(mob);
@@ -28,11 +30,9 @@ public class LandingTask<T extends MobTaskrunner & IFlyable> extends Task<T> {
 
 	@Override
 	protected void onStart() {
-		// Reduce size for landing
+		// Reduce size for landing (hitbox adjustments)
 		mob.setLandingSize(true);
-		mob.setPos(mob.x, mob.y, mob.z); // Refresh AABB
-
-		landingTicks = 0;
+		mob.setPos(mob.x, mob.y, mob.z);
 	}
 
 	@Override
@@ -40,79 +40,71 @@ public class LandingTask<T extends MobTaskrunner & IFlyable> extends Task<T> {
 		ServerBlockPos3D landingTarget = flightTask.getLandingTarget();
 
 		if (landingTarget == null) {
-			// Lost landing target - abort landing
 			mob.setLanding(false);
 			return null;
 		}
 
-		landingTicks++;
+		// Calculate target coordinates (aim for the center-top of the block)
+		// Note: landingTarget.y typically accounts for the block height (y + 1.0)
+		double tx = landingTarget.x + 0.5;
+		double ty = landingTarget.y;
+		double tz = landingTarget.z + 0.5;
 
-		double dx = landingTarget.x + 0.5 - mob.x;
-		double dz = landingTarget.z + 0.5 - mob.z;
-		double dy = landingTarget.y - mob.y;
+		// Calculate distance vector
+		double dx = tx - mob.x;
+		double dy = ty - mob.y;
+		double dz = tz - mob.z;
 
-		// NEW: Instant landing when touching ground, but ONLY if close to target
-		// This prevents premature landing far from the target
-		double horizontalDist = Math.sqrt(dx * dx + dz * dz);
-		if (mob.onGround && horizontalDist < 2.0 && Math.abs(dy) < 1.5) {
+		double distSq = dx * dx + dy * dy + dz * dz;
+		double dist = Math.sqrt(distSq);
+
+		// --- COMPLETION CHECK ---
+		// If very close to the center target OR touching ground near the target
+		// We permit a slightly larger Y tolerance because getting exact Y can be finicky with gravity
+		boolean nearCenter = dist < 0.3;
+		boolean landedOnTarget = mob.onGround && dist < 1.2 && Math.abs(dy) < 0.5;
+
+		if (nearCenter || landedOnTarget) {
 			completeLanding();
 			return null;
 		}
 
-		// Calculate transition progress (0.0 to 1.0)
-		double transitionProgress = Math.min(1.0, landingTicks / (double) TRANSITION_TICKS);
+		// --- VELOCITY CALCULATION ---
 
-		// Fix Issue 4: Gradual trajectory change
-
-		if (horizontalDist > 0.01) {
-			// Smoothly reduce horizontal speed during transition
-			double currentHorizontalSpeed = HORIZONTAL_SPEED * (1.5 - 0.5 * transitionProgress);
-
-			// Fix Issue 4: Smooth horizontal movement (reduce jittering)
-			// Use exponential smoothing instead of direct assignment
-			double targetXd = dx / horizontalDist * currentHorizontalSpeed;
-			double targetZd = dz / horizontalDist * currentHorizontalSpeed;
-
-			mob.xd = mob.xd * 0.7 + targetXd * 0.3; // Smooth interpolation
-			mob.zd = mob.zd * 0.7 + targetZd * 0.3;
+		// 1. Determine desired speed based on distance (Braking Logic)
+		double targetSpeed;
+		if (dist > 3.0) {
+			targetSpeed = APPROACH_SPEED_FAR;
+		} else if (dist > 1.0) {
+			targetSpeed = APPROACH_SPEED_NEAR;
 		} else {
-			// Near target horizontally, dampen movement
-			mob.xd *= 0.8;
-			mob.zd *= 0.8;
+			targetSpeed = APPROACH_SPEED_FINAL;
 		}
 
-		// Fix Issue 4: Gradual descent with smooth speed curve
-		// Start with slow descent, increase during transition
-		double descentSpeed;
-		if (transitionProgress < 1.0) {
-			// Smooth acceleration during transition
-			descentSpeed = MIN_DESCENT_SPEED + (MAX_DESCENT_SPEED - MIN_DESCENT_SPEED) * transitionProgress;
-		} else {
-			// Full descent speed after transition
-			descentSpeed = MAX_DESCENT_SPEED;
-		}
+		// 2. Calculate ideal velocity vector (Direction * Speed)
+		double idealXd = (dx / dist) * targetSpeed;
+		double idealYd = (dy / dist) * targetSpeed;
+		double idealZd = (dz / dist) * targetSpeed;
 
-		// Apply descent, but reduce if getting close to target
-		if (Math.abs(dy) > 0.5) {
-			mob.yd = MathHelper.clamp(dy * 0.1, -descentSpeed, 0.05);
-		} else {
-			// Close to ground - very gentle final approach
-			mob.yd = MathHelper.clamp(dy * 0.2, -MIN_DESCENT_SPEED, 0.02);
-		}
+		// 3. Smoothly interpolate current velocity towards ideal velocity
+		// This creates the "arcing" motion rather than robotic straight lines
+		mob.xd = lerp(mob.xd, idealXd, AGILITY);
+		mob.yd = lerp(mob.yd, idealYd, AGILITY);
+		mob.zd = lerp(mob.zd, idealZd, AGILITY);
 
-		// Update yaw to face landing direction (smooth rotation)
-		if (horizontalDist > 0.01) {
+		// --- ROTATION ---
+		// Update yaw to face movement direction
+		if (dist > 0.1) {
 			float targetYaw = (float) (Math.atan2(mob.zd, mob.xd) * 180.0 / Math.PI) - 90.0F;
-			mob.yRot = smoothRotation(mob.yRot, targetYaw, 8.0F);
-		}
-
-		// Check if we've reached the landing spot
-		if (Math.abs(dx) < 0.25 && Math.abs(dz) < 0.25 && Math.abs(dy) < 0.15) {
-			completeLanding();
-			return null;
+			mob.yRot = smoothRotation(mob.yRot, targetYaw, 15.0F);
 		}
 
 		return null;
+	}
+
+	// Helper for linear interpolation
+	private double lerp(double start, double end, double delta) {
+		return start + (end - start) * delta;
 	}
 
 	private float smoothRotation(float current, float target, float maxChange) {
@@ -128,31 +120,28 @@ public class LandingTask<T extends MobTaskrunner & IFlyable> extends Task<T> {
 		// Successfully landed
 		mob.setFlying(false);
 		mob.setLanding(false);
-
-		// Revert to normal size
 		mob.setLandingSize(false);
 
-		// DON'T auto-perch - let MobBird decide based on ground type and time
-
-		// Ensure clean stop
+		// Stop momentum instantly to prevent sliding off the perch
 		mob.xd = 0;
 		mob.yd = 0;
 		mob.zd = 0;
 		mob.setFlightTime(0);
 
-		// Clear landing target
-		flightTask.setLandingTarget(null);
+		// Snap position to center of block if we were flying (prevents hanging off edge)
+		if (!mob.onGround) {
+			ServerBlockPos3D t = flightTask.getLandingTarget();
+			if (t != null) mob.setPos(t.x + 0.5, t.y, t.z + 0.5);
+		}
 
-		landingTicks = 0;
+		flightTask.setLandingTarget(null);
 	}
 
 	@Override
 	protected void onStop(Task interruptTask) {
-		// If landing is interrupted, cancel it
 		if (interruptTask != null && !(interruptTask instanceof LandingTask)) {
 			mob.setLanding(false);
 			flightTask.setLandingTarget(null);
-			landingTicks = 0;
 		}
 	}
 

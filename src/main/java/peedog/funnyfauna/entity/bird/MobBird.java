@@ -48,6 +48,10 @@ public class MobBird extends MobTaskrunner implements IFlyable, IFlockable, IHom
 	// Fed state
 	public boolean isFed = false;
 
+	// Hopping state
+	private int hopCooldown = 0;
+	private ServerBlockPos3D leapTarget = null;
+
 	// Sound
 	private int ambientSoundTimer;
 
@@ -216,6 +220,16 @@ public class MobBird extends MobTaskrunner implements IFlyable, IFlockable, IHom
 		return this.entityData.getInt(DATA_SKIN_VARIANT);
 	}
 
+	// ==================== LEAP TARGET MANAGEMENT ====================
+
+	public ServerBlockPos3D getLeapTarget() {
+		return leapTarget;
+	}
+
+	public void clearLeapTarget() {
+		leapTarget = null;
+	}
+
 	// ==================== ADDITIONAL BEHAVIOR ====================
 
 	@Override
@@ -267,6 +281,15 @@ public class MobBird extends MobTaskrunner implements IFlyable, IFlockable, IHom
 	public void updateAI() {
 		super.updateAI();
 
+		// CRITICAL: Prevent walking - birds only hop
+		if (!isFlying() && onGround) {
+			// Zero out horizontal movement unless we're in the middle of a hop
+			if (Math.abs(yd) < 0.05) {
+				xd *= 0.3; // Heavy damping
+				zd *= 0.3;
+			}
+		}
+
 		// Update home position when grounded
 		if ((onGround || isPerched()) && !isFlying()) {
 			homeX = x;
@@ -276,12 +299,172 @@ public class MobBird extends MobTaskrunner implements IFlyable, IFlockable, IHom
 		// Check for nearby threats (player sprinting, low health)
 		checkForThreats();
 
+		// Handle hopping behavior
+		if (!isFlying() && !isPerched()) {
+			handleHopping();
+		}
+
 		// Check if should enter perch mode (on leaves or at night)
 		checkPerchConditions();
+	}
 
-		if (onGround && random.nextInt(50) == 0) {
-			yd = 0.3;
+	private void handleHopping() {
+		if (!onGround) return;
+
+		hopCooldown--;
+
+		// On leaves: allow vertical hops AND occasional leaf-switching
+		if (isStandingOnLeaves()) {
+			if (hopCooldown <= 0) {
+				// Most of the time: small vertical hop only
+				if (random.nextInt(5) == 0) {
+					// 20% chance: Look for a different leaf to switch to
+					ServerBlockPos3D newLeaf = findNearbyDifferentLeaf();
+					if (newLeaf != null) {
+						leapToward(newLeaf);
+						hopCooldown = 40 + random.nextInt(40); // Longer cooldown after switching
+					} else {
+						// No different leaf found, just do vertical hop
+						yd = 0.25 + random.nextDouble() * 0.1;
+						xd = 0;
+						zd = 0;
+						hopCooldown = 15 + random.nextInt(10);
+					}
+				} else {
+					// 80% chance: Simple vertical hop
+					yd = 0.25 + random.nextDouble() * 0.1;
+					xd = 0;
+					zd = 0;
+					hopCooldown = 15 + random.nextInt(10);
+				}
+			}
+			return;
 		}
+
+		// On ground (not leaves): can make targeted leaps or random hops
+		if (hopCooldown <= 0) {
+			// Decide: targeted leap or random hop?
+			if (random.nextInt(3) == 0) {
+				// Targeted leap - find nearby leaves or ground
+				ServerBlockPos3D target = findLeapTarget();
+				if (target != null) {
+					leapToward(target);
+					hopCooldown = 20 + random.nextInt(20);
+				} else {
+					// No target found, do random hop
+					randomHop();
+					hopCooldown = 10 + random.nextInt(15);
+				}
+			} else {
+				// Random hop
+				randomHop();
+				hopCooldown = 10 + random.nextInt(15);
+			}
+		}
+	}
+
+	private void randomHop() {
+		if (!onGround) return;
+
+		// Small random hop
+		yd = 0.2 + random.nextDouble() * 0.15;
+
+		// Slight random horizontal movement
+		double angle = random.nextDouble() * Math.PI * 2;
+		xd = Math.cos(angle) * 0.05;
+		zd = Math.sin(angle) * 0.05;
+	}
+
+	private ServerBlockPos3D findNearbyDifferentLeaf() {
+		int bx = MathHelper.floor(x);
+		int by = MathHelper.floor(y - 0.1); // Current leaf position
+		int bz = MathHelper.floor(z);
+
+		// Search nearby for different leaves (not the one we're standing on)
+		// Search 3 blocks horizontally, -1 to +3 vertically
+		for (int dx = -3; dx <= 3; dx++) {
+			for (int dz = -3; dz <= 3; dz++) {
+				for (int dy = -1; dy <= 3; dy++) {
+					int checkX = bx + dx;
+					int checkY = by + dy;
+					int checkZ = bz + dz;
+
+					// Skip current position
+					if (checkX == bx && checkY == by && checkZ == bz) continue;
+
+					int id = world.getBlockId(checkX, checkY, checkZ);
+					if (id != 0) {
+						Block block = Blocks.blocksList[id];
+						if (block != null && block.getMaterial() == Material.leaves) {
+							// Check if air above
+							if (world.isAirBlock(checkX, checkY + 1, checkZ)) {
+								// Found a different leaf!
+								return new ServerBlockPos3D(checkX, checkY, checkZ);
+							}
+						}
+					}
+				}
+			}
+		}
+
+		return null; // No different leaf found
+	}
+
+	private ServerBlockPos3D findLeapTarget() {
+		int bx = MathHelper.floor(x);
+		int by = MathHelper.floor(y);
+		int bz = MathHelper.floor(z);
+
+		// Prefer leaves, but accept ground too
+		ServerBlockPos3D leavesTarget = null;
+		ServerBlockPos3D groundTarget = null;
+
+		// INCREASED: Search in a radius of 6 blocks horizontally, up to 8 blocks up
+		for (int dx = -6; dx <= 6; dx++) {
+			for (int dz = -6; dz <= 6; dz++) {
+				if (dx == 0 && dz == 0) continue;
+
+				for (int dy = 0; dy <= 8; dy++) {
+					int checkX = bx + dx;
+					int checkY = by + dy;
+					int checkZ = bz + dz;
+
+					// Check if there's a block to land on
+					int id = world.getBlockId(checkX, checkY, checkZ);
+					if (id != 0) {
+						Block block = Blocks.blocksList[id];
+						if (block != null) {
+							// Check if air above (landing spot)
+							if (world.isAirBlock(checkX, checkY + 1, checkZ)) {
+								if (block.getMaterial() == Material.leaves) {
+									// Prefer leaves
+									if (leavesTarget == null || random.nextBoolean()) {
+										leavesTarget = new ServerBlockPos3D(checkX, checkY, checkZ);
+									}
+								} else if (block.isCubeShaped()) {
+									// Accept ground as backup
+									if (groundTarget == null || random.nextBoolean()) {
+										groundTarget = new ServerBlockPos3D(checkX, checkY, checkZ);
+									}
+								}
+							}
+						}
+					}
+				}
+			}
+		}
+
+		// Return leaves if found, otherwise ground
+		return leavesTarget != null ? leavesTarget : groundTarget;
+	}
+
+	private void leapToward(ServerBlockPos3D target) {
+		// SIMPLIFIED: Always use smooth solo flight instead of ballistic leaps
+		// This is smoother, more reliable, and looks better than jarring hops
+		setSoloFlying(true);
+		setFlying(true);
+		setFlightTime(0);
+		leapTarget = target;
 	}
 
 	private void updateWingAnimation() {
@@ -397,19 +580,6 @@ public class MobBird extends MobTaskrunner implements IFlyable, IFlockable, IHom
 				setPerched(true);
 			}
 
-			// Occasionally look for leaves to perch on
-			if (!isPerched() && random.nextInt(200) == 0) {
-				ServerBlockPos3D leaves = findNearbyLeavesAbove(8, 2);
-				if (leaves != null) {
-					// Start solo perch-seeking flight
-					setSoloFlying(true);
-					setFlying(true);
-					setFlightTime(0);
-					yd = 0.15; // Initial upward boost
-					xd = 0;
-					zd = 0;
-				}
-			}
 			// Unperch at daybreak
 			if (isPerched() && !isNight() && !isStandingOnLeaves()) {
 				setPerched(false);
@@ -423,7 +593,7 @@ public class MobBird extends MobTaskrunner implements IFlyable, IFlockable, IHom
 			}
 		}
 
-		// Check flock takeoff
+		// Check flock takeoff - CRITICAL: Don't trigger for solo flying birds!
 		if (!isFlying() && !isSoloFlying() && !isNight()) {
 			List<MobBird> nearbyBirds = world.getEntitiesWithinAABB(
 				MobBird.class,
@@ -433,8 +603,8 @@ public class MobBird extends MobTaskrunner implements IFlyable, IFlockable, IHom
 			for (MobBird bird : nearbyBirds) {
 				if (bird != this
 					&& bird.isFlying()
-					&& !bird.isSoloFlying()
-					&& !bird.isLanding()  // FIX: Don't join birds that are landing!
+					&& !bird.isSoloFlying()  // CRITICAL: Don't join solo fliers!
+					&& !bird.isLanding()     // Don't join birds that are landing
 					&& bird.getSkinVariant() == this.getSkinVariant()) {
 
 					// Join the flock!
@@ -556,6 +726,7 @@ public class MobBird extends MobTaskrunner implements IFlyable, IFlockable, IHom
 		tag.putInt("Skin", getSkinVariant());
 		tag.putBoolean("SoloPerching", soloPerchingFlight);
 		tag.putBoolean("IsFed", isFed);
+		tag.putInt("HopCooldown", hopCooldown);
 	}
 
 	@Override
@@ -567,6 +738,7 @@ public class MobBird extends MobTaskrunner implements IFlyable, IFlockable, IHom
 		setSkinVariant(tag.getInteger("Skin"));
 		soloPerchingFlight = tag.getBoolean("SoloPerching");
 		isFed = tag.getBoolean("IsFed");
+		hopCooldown = tag.getInteger("HopCooldown");
 	}
 
 	private void playBirdSound() {

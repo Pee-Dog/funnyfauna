@@ -10,13 +10,12 @@ import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
-import peedog.funnyfauna.gui.BundleContents;
-import peedog.funnyfauna.gui.ContainerSatchel;
-import peedog.funnyfauna.gui.GuiSatchel;
+import peedog.funnyfauna.gui.satchel.BundleContents;
+import peedog.funnyfauna.gui.satchel.ContainerSatchel;
+import peedog.funnyfauna.gui.satchel.GuiSatchel;
 import peedog.funnyfauna.item.ItemScales;
 import peedog.funnyfauna.item.ItemReinforcedScales;
 import peedog.funnyfauna.item.ItemSatchel;
-import peedog.funnyfauna.gui.InventorySatchel;
 
 @Mixin(ScreenContainerAbstract.class)
 public abstract class ScreenContainerAbstractMixin {

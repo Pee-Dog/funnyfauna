@@ -1,8 +1,7 @@
-package peedog.funnyfauna.gui;
+package peedog.funnyfauna.gui.anthill;
 
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
-import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.ButtonElement;
 import net.minecraft.client.gui.container.ScreenContainerAbstract;
 import org.lwjgl.opengl.GL11;

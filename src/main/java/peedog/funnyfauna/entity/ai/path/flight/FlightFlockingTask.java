@@ -17,33 +17,33 @@ import java.util.List;
 
 /**
  * Handles flocking flight behavior.
- * - Solo birds maintain cruising speed.
- * - Water is treated as ground for height checks.
+ * - Solo birds maintain speed using a stronger cruise engine.
+ * - Flocks turn together using Coherent Noise (shared WorldTime reference).
+ * - Includes Obstacle Avoidance for walls/mountains.
  */
 public class FlightFlockingTask<T extends MobTaskrunner & IFlyable> extends Task<T> {
-	// Increased MIN_SPEED to match flocking speed
+	// Speed settings
 	private static final float MAX_SPEED = 0.6F;
-	private static final float MIN_SPEED = 0.3F; // Raised from 0.15 to prevent sluggish solo flight
-	private static final int MAX_FLIGHT_TIME = 600;
+	private static final float MIN_SPEED = 0.35F; // Increased slightly for solo consistency
+	private static final int MAX_FLIGHT_TIME = 1200; // Increased flight duration
 
 	// Flocking parameters
-	private static final double NEIGHBOR_RADIUS = 8.0;
-	private static final double SEPARATION_RADIUS = 3.0;
+	private static final double NEIGHBOR_RADIUS = 10.0;
+	private static final double SEPARATION_RADIUS = 2.5;
 
-	// Weights
-	private static final double WEIGHT_SEPARATION = 1.8;
-	private static final double WEIGHT_ALIGNMENT = 1.0;
-	private static final double WEIGHT_COHESION = 0.5;
-	private static final double WEIGHT_WANDER = 0.3;
-	private static final double WEIGHT_CRUISE = 0.5; // New force for solo speed
+	// Steering Weights
+	private static final double WEIGHT_SEPARATION = 2.5; // High priority to prevent stacking
+	private static final double WEIGHT_ALIGNMENT = 1.2;
+	private static final double WEIGHT_COHESION = 0.4;
+
+	// New/Adjusted Weights
+	private static final double WEIGHT_WANDER = 0.6; // Increased to make turns noticeable
+	private static final double WEIGHT_CRUISE = 1.5; // TRIPLED: Ensures solo birds have "engine power"
+	private static final double WEIGHT_OBSTACLE = 5.0; // Critical priority
 
 	// Height parameters
-	private static final double MIN_FLIGHT_HEIGHT = 20.0; // Target ~20 blocks up
+	private static final double MIN_FLIGHT_HEIGHT = 20.0;
 	private static final double MAX_FLIGHT_HEIGHT = 30.0;
-
-	// Collision handling
-	private int headHitTicks = 0;
-	private static final int MAX_HEAD_HIT_TICKS = 40;
 
 	public FlightFlockingTask(T mob) {
 		super(mob);
@@ -55,32 +55,18 @@ public class FlightFlockingTask<T extends MobTaskrunner & IFlyable> extends Task
 
 	@Override
 	protected Task onTick() {
-		// Update ground reference (Includes water now)
 		mob.setGroundY(getGroundHeight());
 
-		// Check for max flight time
+		// Basic flight limits
 		if (mob.getFlightTime() > MAX_FLIGHT_TIME) {
 			mob.setFlying(false);
 			mob.yd = -0.1;
 			return null;
 		}
 
-		// Handle ceiling collision
-		if (isHeadBlocked()) {
-			headHitTicks++;
-			if (mob.yd > 0) mob.yd = 0;
-			boolean escaped = trySlideToAir();
-
-			if (!escaped || headHitTicks > MAX_HEAD_HIT_TICKS) {
-				mob.setFlying(false);
-				mob.yd = -0.15;
-				mob.xd *= 0.3;
-				mob.zd *= 0.3;
-				headHitTicks = 0;
-				return null;
-			}
-		} else {
-			headHitTicks = 0;
+		// Handle ceiling collision (Head bonk)
+		if (isHeadBlocked() && mob.yd > 0) {
+			mob.yd = -0.1; // Bonk down
 		}
 
 		applyFlockingBehavior();
@@ -89,10 +75,12 @@ public class FlightFlockingTask<T extends MobTaskrunner & IFlyable> extends Task
 	}
 
 	private void applyFlockingBehavior() {
-		// 1. GATHER NEIGHBORS
+		Vec3 steering = Vec3.getTempVec3(0, 0, 0);
+
+		// --- 1. GATHER FLOCK NEIGHBORS ---
 		List<Entity> nearbyEntities = mob.world.getEntitiesWithinAABB(
 			Entity.class,
-			AABB.getTemporaryBB(mob.x, mob.y, mob.z, mob.x + 1, mob.y + 1, mob.z + 1).grow(NEIGHBOR_RADIUS, 6, NEIGHBOR_RADIUS)
+			AABB.getTemporaryBB(mob.x, mob.y, mob.z, mob.x + 1, mob.y + 1, mob.z + 1).grow(NEIGHBOR_RADIUS, 8, NEIGHBOR_RADIUS)
 		);
 
 		Vec3 separation = Vec3.getTempVec3(0, 0, 0);
@@ -123,25 +111,25 @@ public class FlightFlockingTask<T extends MobTaskrunner & IFlyable> extends Task
 			if (distSq > neighborRadiusSq || distSq == 0) continue;
 			double dist = Math.sqrt(distSq);
 
-			// Separation
+			// Separation: Push away from neighbors
 			if (dist < SEPARATION_RADIUS) {
 				double strength = (SEPARATION_RADIUS - dist) / SEPARATION_RADIUS;
 				separation = separation.add(dx / dist * strength, 0, dz / dist * strength);
 			}
 
-			// Alignment
+			// Alignment: Match velocity
 			alignment = alignment.add(entity.xd, 0, entity.zd);
 
-			// Cohesion
+			// Cohesion: Steer toward center
 			cohesion = cohesion.add(entity.x, 0, entity.z);
 
 			count++;
 		}
 
-		// 2. CALCULATE STEERING FORCES
-		Vec3 steering = Vec3.getTempVec3(0, 0, 0);
+		// --- 2. CALCULATE STEERING FORCES ---
 
 		if (count > 0) {
+			// Normalize flocking vectors
 			alignment = Vec3.getTempVec3(alignment.x / count, 0, alignment.z / count).normalize();
 
 			cohesion = Vec3.getTempVec3(cohesion.x / count, 0, cohesion.z / count);
@@ -151,73 +139,113 @@ public class FlightFlockingTask<T extends MobTaskrunner & IFlyable> extends Task
 			steering = steering.add(alignment.x * WEIGHT_ALIGNMENT, 0, alignment.z * WEIGHT_ALIGNMENT);
 			steering = steering.add(cohesion.x * WEIGHT_COHESION, 0, cohesion.z * WEIGHT_COHESION);
 		} else {
-			// Solo behavior: Home bias
+			// Solo Home Bias
 			if (mob instanceof IHomeable) {
 				IHomeable homeable = (IHomeable) mob;
 				double dxHome = homeable.getHomeX() - mob.x;
 				double dzHome = homeable.getHomeZ() - mob.z;
 				double dist = Math.sqrt(dxHome*dxHome + dzHome*dzHome);
 				if (dist > 1.0) {
-					steering = steering.add((dxHome / dist) * 0.05, 0, (dzHome / dist) * 0.05);
+					steering = steering.add((dxHome / dist) * 0.1, 0, (dzHome / dist) * 0.1);
 				}
 			}
 		}
 
-		// CRUISE CONTROL (Fix for slow solo birds)
-		// If the bird has velocity, add a force in that direction to maintain momentum.
-		// If it has no velocity (stopped), push it forward based on rotation.
-		double currentSpeed = Math.sqrt(mob.xd * mob.xd + mob.zd * mob.zd);
-		if (currentSpeed > 0.01) {
-			steering = steering.add((mob.xd / currentSpeed) * WEIGHT_CRUISE, 0, (mob.zd / currentSpeed) * WEIGHT_CRUISE);
+		// --- 3. COHERENT WANDER (FIX FOR FLOCK TURNING) ---
+		// Instead of random(), use WorldTime. This creates a "global wind" that affects all birds equally.
+		// Result: The entire flock turns Left/Right simultaneously.
+		double time = mob.world.getWorldTime() * 0.05; // 0.05 controls how fast the "wind" changes direction
+
+		// Use two sine waves for more organic, less robotic movement
+		double wanderDirX = Math.sin(time) + Math.sin(time * 0.3) * 0.5;
+		double wanderDirZ = Math.cos(time) + Math.cos(time * 0.8) * 0.5;
+
+		steering = steering.add(wanderDirX * WEIGHT_WANDER, 0, wanderDirZ * WEIGHT_WANDER);
+
+		// --- 4. OBSTACLE AVOIDANCE (NEW) ---
+		// Cast a ray 4 blocks ahead
+		Vec3 look = Vec3.getTempVec3(mob.xd, 0, mob.zd).normalize();
+		if (isCollidingAhead(look, 4.0)) {
+			// If blocked, turn 90 degrees relative to current look
+			// We check which way is open (left or right)
+			// Simple version: Just turn hard right. The coherence noise will eventually smooth it out.
+			steering = steering.add(-look.z * WEIGHT_OBSTACLE, 0, look.x * WEIGHT_OBSTACLE);
+		}
+
+		// --- 5. CRUISE CONTROL (FIX FOR SLOW SOLO BIRDS) ---
+		// Always apply cruise force in the direction of current movement (or desired movement)
+		// This acts as the "Engine" that ensures solo birds keep up with the flock
+		if (mob.xd * mob.xd + mob.zd * mob.zd > 0.001) {
+			Vec3 forward = Vec3.getTempVec3(mob.xd, 0, mob.zd).normalize();
+			steering = steering.add(forward.x * WEIGHT_CRUISE, 0, forward.z * WEIGHT_CRUISE);
 		} else {
+			// If stalled, kickstart forward
 			double rad = Math.toRadians(mob.yRot);
 			steering = steering.add(-Math.sin(rad) * WEIGHT_CRUISE, 0, Math.cos(rad) * WEIGHT_CRUISE);
 		}
 
-		// WANDER
-		double timeScale = mob.tickCount * 0.1;
-		double wanderX = Math.sin(timeScale) * 0.5 + (random.nextDouble() - 0.5);
-		double wanderZ = Math.cos(timeScale) * 0.5 + (random.nextDouble() - 0.5);
-		steering = steering.add(wanderX * WEIGHT_WANDER, 0, wanderZ * WEIGHT_WANDER);
-
-		// 3. APPLY FORCES
+		// --- 6. APPLY AND LIMIT ---
+		// Apply force
 		mob.xd += steering.x * 0.05;
 		mob.zd += steering.z * 0.05;
 
-		// 4. LIMIT AND NORMALIZE SPEED
+		// Speed Limiting & Normalization
 		double speedSq = mob.xd * mob.xd + mob.zd * mob.zd;
 		if (speedSq > 0.0001) {
 			double speed = Math.sqrt(speedSq);
 
-			// Force speed into the Goldilocks zone (not too fast, not too slow)
-			double targetSpeed = speed;
+			// We force speed towards the target MAX_SPEED
+			// This ensures solo birds speed up to match the flock
+			double targetSpeed = MAX_SPEED;
+
+			// Allow them to slow down slightly if turning hard, but clamp bottom end
+			if (speed < MIN_SPEED) targetSpeed = MIN_SPEED;
 			if (speed > MAX_SPEED) targetSpeed = MAX_SPEED;
-			if (speed < MIN_SPEED) targetSpeed = MIN_SPEED; // This ensures solo birds don't stall
 
 			mob.xd = (mob.xd / speed) * targetSpeed;
 			mob.zd = (mob.zd / speed) * targetSpeed;
 
-			// Update rotation to face velocity
+			// Update rotation
 			double desiredYaw = Math.toDegrees(Math.atan2(mob.zd, mob.xd)) - 90.0F;
 			mob.yRot = updateRotation(mob.yRot, (float)desiredYaw, 10.0F);
 		}
 
-		// VERTICAL FLIGHT
+		// --- 7. VERTICAL FLIGHT ---
+		handleHeight();
+	}
+
+	private void handleHeight() {
 		double groundY = mob.getGroundY();
-		double targetY = groundY + MIN_FLIGHT_HEIGHT + random.nextDouble() * (MAX_FLIGHT_HEIGHT - MIN_FLIGHT_HEIGHT);
+		double targetY = groundY + MIN_FLIGHT_HEIGHT + Math.sin(mob.tickCount * 0.1) * 2.0; // Bobbing
 
 		double dy = targetY - mob.y;
-
-		// Stronger lift if below minimum height
-		double liftStrength = (mob.y < groundY + MIN_FLIGHT_HEIGHT) ? 0.02 : 0.005;
+		double liftStrength = (mob.y < groundY + MIN_FLIGHT_HEIGHT) ? 0.03 : 0.01;
 
 		mob.yd += dy * liftStrength;
+		mob.yd = MathHelper.clamp(mob.yd, -0.4, 0.4);
 
-		if (mob.yd > 0.45) mob.yd = 0.45;
-		if (mob.yd < -0.45) mob.yd = -0.45;
-
+		// Friction
 		mob.xd *= 0.99;
 		mob.zd *= 0.99;
+	}
+
+	private boolean isCollidingAhead(Vec3 dir, double dist) {
+		// Start at eye height
+		double startX = mob.x;
+		double startY = mob.y + mob.bbHeight * 0.5;
+		double startZ = mob.z;
+
+		// Check end point
+		int endX = MathHelper.floor(startX + dir.x * dist);
+		int endY = MathHelper.floor(startY);
+		int endZ = MathHelper.floor(startZ + dir.z * dist);
+
+		int id = mob.world.getBlockId(endX, endY, endZ);
+		if (id != 0) {
+			Block b = Blocks.blocksList[id];
+			return b != null && (b.isCubeShaped() || b.getMaterial() == Material.leaves);
+		}
+		return false;
 	}
 
 	private float updateRotation(float current, float target, float maxChange) {
@@ -233,55 +261,25 @@ public class FlightFlockingTask<T extends MobTaskrunner & IFlyable> extends Task
 		int bx = MathHelper.floor(mob.x);
 		int bz = MathHelper.floor(mob.z);
 		int by = MathHelper.floor(mob.y);
-
-		// Scan downwards
 		while (by > 0) {
 			int blockId = mob.world.getBlockId(bx, by, bz);
-			if (blockId != 0) {
+			if (blockId != 0 && Blocks.blocksList[blockId] != null) {
 				Block block = Blocks.blocksList[blockId];
-				if (block != null) {
-					// Check for Solids OR Liquid
-					// This prevents birds from diving into water
-					if (block.isCubeShaped() || block.getMaterial() == Material.water || block.getMaterial() == Material.lava) {
-						return by + 1.0;
-					}
+				if (block.isCubeShaped() || block.getMaterial() == Material.water || block.getMaterial() == Material.lava) {
+					return by + 1.0;
 				}
 			}
 			by--;
 		}
-		return 1.0; // Default to bottom if void
+		return 1.0;
 	}
 
 	private boolean isHeadBlocked() {
 		int headX = MathHelper.floor(mob.x);
 		int headY = MathHelper.floor(mob.y + mob.bbHeight + 0.1);
 		int headZ = MathHelper.floor(mob.z);
-
 		int id = mob.world.getBlockId(headX, headY, headZ);
-		if (id == 0) return false;
-
-		Block block = Blocks.blocksList[id];
-		return block != null && block.isCubeShaped();
-	}
-
-	private boolean trySlideToAir() {
-		double[][] offsets = {
-			{ 0.4,  0.0}, {-0.4,  0.0}, { 0.0,  0.4}, { 0.0, -0.4},
-			{ 0.4,  0.4}, {-0.4, -0.4}
-		};
-
-		for (double[] o : offsets) {
-			int ax = MathHelper.floor(mob.x + o[0]);
-			int ay = MathHelper.floor(mob.y + mob.bbHeight + 0.1);
-			int az = MathHelper.floor(mob.z + o[1]);
-
-			if (mob.world.isAirBlock(ax, ay, az)) {
-				mob.xd += o[0] * 0.2;
-				mob.zd += o[1] * 0.2;
-				return true;
-			}
-		}
-		return false;
+		return id != 0 && Blocks.blocksList[id] != null && Blocks.blocksList[id].isCubeShaped();
 	}
 
 	@Override

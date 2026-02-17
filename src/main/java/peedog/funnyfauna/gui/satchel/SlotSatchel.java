@@ -1,7 +1,6 @@
-package peedog.funnyfauna.gui;
+package peedog.funnyfauna.gui.satchel;
 
 import net.minecraft.core.item.ItemStack;
-import net.minecraft.core.player.inventory.container.Container;
 import net.minecraft.core.player.inventory.slot.Slot;
 import peedog.funnyfauna.item.ItemSatchel;
 

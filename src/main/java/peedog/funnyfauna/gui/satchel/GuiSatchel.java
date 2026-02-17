@@ -1,4 +1,4 @@
-package peedog.funnyfauna.gui;
+package peedog.funnyfauna.gui.satchel;
 
 import net.minecraft.client.gui.container.ScreenContainerAbstract;
 import net.minecraft.client.gui.container.ScreenInventory;
@@ -9,7 +9,6 @@ import net.minecraft.core.player.inventory.slot.Slot;
 import org.lwjgl.input.Keyboard;
 import org.lwjgl.opengl.GL11;
 import peedog.funnyfauna.FunnyFauna;
-import peedog.funnyfauna.item.ItemSatchel;
 
 public class GuiSatchel extends ScreenContainerAbstract {
 	private int GUIx;

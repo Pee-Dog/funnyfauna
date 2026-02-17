@@ -1,4 +1,4 @@
-package peedog.funnyfauna.gui;
+package peedog.funnyfauna.gui.satchel;
 
 import net.minecraft.client.Minecraft;
 import net.minecraft.core.InventoryAction;

@@ -15,9 +15,9 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 import peedog.funnyfauna.PlayerInventoryDisplay;
 import peedog.funnyfauna.entity.camel.MobCamel;
-import peedog.funnyfauna.gui.ContainerCamel;
-import peedog.funnyfauna.gui.GuiCamel;
-import peedog.funnyfauna.gui.GuiSatchel;
+import peedog.funnyfauna.gui.camel.ContainerCamel;
+import peedog.funnyfauna.gui.camel.GuiCamel;
+import peedog.funnyfauna.gui.satchel.GuiSatchel;
 import peedog.funnyfauna.item.ItemToggleable;
 
 @Mixin(value = PlayerLocal.class, remap = false)

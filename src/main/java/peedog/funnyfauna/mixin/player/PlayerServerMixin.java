@@ -7,15 +7,11 @@ import net.minecraft.server.entity.player.PlayerServer;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Shadow;
 import org.spongepowered.asm.mixin.Unique;
-import org.spongepowered.asm.mixin.injection.At;
-import org.spongepowered.asm.mixin.injection.Inject;
-import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 import peedog.funnyfauna.FunnyFauna;
 import peedog.funnyfauna.PlayerInventoryDisplay;
 import peedog.funnyfauna.entity.camel.MobCamel;
-import peedog.funnyfauna.gui.ContainerCamel;
-import peedog.funnyfauna.gui.ContainerSatchel;
-import peedog.funnyfauna.item.ItemClimbingClaws;
+import peedog.funnyfauna.gui.camel.ContainerCamel;
+import peedog.funnyfauna.gui.satchel.ContainerSatchel;
 import peedog.funnyfauna.item.ItemSatchel;
 
 @Mixin(value = PlayerServer.class, remap = false)

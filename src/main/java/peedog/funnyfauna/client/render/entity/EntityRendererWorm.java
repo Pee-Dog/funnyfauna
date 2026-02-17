@@ -21,7 +21,23 @@ public class EntityRendererWorm extends EntityRenderer<EntityWorm> {
 		GL11.glDisable(GL11.GL_LIGHTING);
 		GL11.glEnable(GL11.GL_NORMALIZE);
 
-		GL11.glRotatef(-worm.yRot, 0F, 1F, 0F);
+		boolean climbing = worm.horizontalCollision && worm.canClimb();
+
+		if (climbing) {
+			// Snap facing to nearest 90°
+			float snappedYaw = Math.round(worm.yRot / 90F) * 90F;
+
+			// Rotate worm to "stick" to wall
+			GL11.glRotatef(-snappedYaw, 0F, 1F, 0F); // face correct cardinal direction
+			GL11.glRotatef(-90F, 1F, 0F, 0F);       // stand upright on wall
+
+			// Push slightly off wall so it doesn't clip
+			GL11.glTranslatef(0F, 0F, -0.21F);
+
+		} else {
+			// Normal ground rotation
+			GL11.glRotatef(-worm.yRot, 0F, 1F, 0F);
+		}
 
 		// Select texture based on animation frame
 		String texture;
@@ -31,7 +47,6 @@ public class EntityRendererWorm extends EntityRenderer<EntityWorm> {
 			case 1: texture = "/assets/funnyfauna/textures/entity/worm/worm_b.png"; break;
 			default: texture = "/assets/funnyfauna/textures/entity/worm/worm_c.png"; break;
 		}
-
 		this.bindTexture(texture);
 
 		// Extract RGB from worm color
@@ -41,13 +56,12 @@ public class EntityRendererWorm extends EntityRenderer<EntityWorm> {
 		float b = (color & 255) / 255.0F;
 
 		float brightness = worm.getBrightness(partialTick);
-
 		float size = 0.2F;
 
 		t.startDrawingQuads();
 		t.setColorOpaque_F(r * brightness, g * brightness, b * brightness);
 
-		// Render flat quad on the ground
+		// Render flat quad centered at origin
 		t.addVertexWithUV(-size, 0, -size, 0, 1);
 		t.addVertexWithUV(-size, 0,  size, 0, 0);
 		t.addVertexWithUV( size, 0,  size, 1, 0);

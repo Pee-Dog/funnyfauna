@@ -1,4 +1,4 @@
-package peedog.funnyfauna.gui;
+package peedog.funnyfauna.gui.camel;
 
 import net.minecraft.core.item.ItemStack;
 import net.minecraft.core.player.inventory.container.Container;
