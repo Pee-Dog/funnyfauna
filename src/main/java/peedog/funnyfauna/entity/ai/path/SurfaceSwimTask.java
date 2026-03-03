@@ -33,7 +33,6 @@ public class SurfaceSwimTask<T extends MobTaskrunner> extends PathTask<T> {
 			while (mob.world.getBlockMaterial(bx, surfaceY + 1, bz) == Material.water) {
 				surfaceY++;
 			}
-
 			double targetY  = (double)surfaceY + 0.85;
 			double diff = targetY - mob.y;
 

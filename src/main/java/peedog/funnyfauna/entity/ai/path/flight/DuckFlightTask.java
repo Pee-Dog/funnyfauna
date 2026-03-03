@@ -62,15 +62,15 @@ public class DuckFlightTask extends FlightTask<MobDuck> {
 			Material material = block.getMaterial();
 
 			// Ducks prefer water
-			if (material == Material.water || material == Material.lava) {
+			if (material == Material.water) {
 				// Allow landing on liquids (duck will float)
 				return by + 1.0;
 			}
 
-			// For non‑liquid blocks, only land on solid ground or leaves
-			if (material == Material.leaves || block.isCubeShaped()) {
-				// If flightTime < 400, prefer leaves (like birds)
-				if (flightTime <= 400 && material != Material.leaves) {
+			// For non‑liquid blocks, only land on solid ground
+			if (block.isCubeShaped()) {
+				// If flightTime < 400, prefer ground
+				if (flightTime <= 400) {
 					continue; // not leaves, skip for early landing
 				}
 				return by + 1.0;
