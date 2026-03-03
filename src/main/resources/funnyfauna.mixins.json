@@ -6,21 +6,22 @@
     "defaultRequire": 1
   },
   "mixins": [
-    "accessors.EntityAccessor",
-    "player.PlayerMixin",
-    "player.PlayerControllerMixin",
-    "WorldMixin",
-    "ScreenContainerAbstractMixin",
-    "player.PlayerSturdyShellMixin",
-    "player.PlayerDropMixin",
     "EntityRenderDispatcherMixin",
-    "MobMixin"
+    "MixinDecoratorOverworld",
+    "MobMixin",
+    "ScreenContainerAbstractMixin",
+    "WorldMixin",
+    "accessors.EntityAccessor",
+    "player.PlayerControllerMixin",
+    "player.PlayerDropMixin",
+    "player.PlayerMixin",
+    "player.PlayerSturdyShellMixin"
   ],
   "client": [
+    "DynamicTexturesMixin",
     "PacketHandlerClientMixin",
-    "player.PlayerLocalMixin",
     "player.PlayerLocalHandleFunnyRideableMixin",
-    "DynamicTexturesMixin"
+    "player.PlayerLocalMixin"
   ],
   "server": [
     "PacketHandlerServerMixin",

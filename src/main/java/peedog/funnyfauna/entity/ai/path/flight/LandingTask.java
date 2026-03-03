@@ -30,8 +30,8 @@ public class LandingTask<T extends MobTaskrunner & IFlyable> extends Task<T> {
 
 	@Override
 	protected void onStart() {
-		// Reduce size for landing (hitbox adjustments)
-		mob.setLandingSize(true);
+		// Hitbox stays at flying size throughout descent.
+		// completeLanding() calls setLandingSize(false) once the mob actually touches down.
 		mob.setPos(mob.x, mob.y, mob.z);
 	}
 

@@ -36,6 +36,7 @@ import peedog.funnyfauna.entity.penguin.MobPenguin;
 import peedog.funnyfauna.item.FunnyFaunaItems;
 import peedog.funnyfauna.net.message.EjectRiderNetworkMessage;
 import peedog.funnyfauna.net.message.FunnyRideableNetworkMessage;
+import peedog.funnyfauna.world.features.FunnyFaunaWorldFeatures;
 import turniplabs.halplibe.helper.network.NetworkHandler;
 import turniplabs.halplibe.util.ConfigHandler;
 import turniplabs.halplibe.util.GameStartEntrypoint;
@@ -97,6 +98,7 @@ public class FunnyFauna implements ModInitializer, RecipeEntrypoint, GameStartEn
 	public void onInitialize() {
 		new FunnyFaunaItems().initializeItems();
 		new FunnyFaunaBlocks().initializeBlocks();
+		FunnyFaunaWorldFeatures.init();
 		NamespaceID emuEggId = NamespaceID.getPermanent(MOD_ID, "emu_egg");
 		TileEntityDispatcher.addMapping(TileEntityEmuEgg.class, emuEggId);
 		NamespaceID jarCricketId = NamespaceID.getPermanent(MOD_ID, "jar_cricket");

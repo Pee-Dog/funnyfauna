@@ -41,19 +41,6 @@ public class FlightSoloPerchTask<T extends MobTaskrunner & IFlyable> extends Tas
 			return null;
 		}
 
-		// Handle ceiling collision
-		if (isHeadBlocked()) {
-			headHitTicks++;
-			if (mob.yd > 0) mob.yd = 0;
-
-			if (!trySlideToAir() || headHitTicks > MAX_HEAD_HIT_TICKS) {
-				abortSoloFlight();
-				return null;
-			}
-		} else {
-			headHitTicks = 0;
-		}
-
 		// Get leap target from MobBird
 		ServerBlockPos3D target = null;
 		if (mob instanceof MobBird) {

@@ -6,6 +6,7 @@ import net.minecraft.core.Global;
 import net.minecraft.core.entity.Entity;
 import net.minecraft.core.entity.player.Player;
 import net.minecraft.core.item.ItemStack;
+import net.minecraft.core.item.Items;
 import net.minecraft.core.net.packet.PacketSetRiding;
 import net.minecraft.core.util.collection.NamespaceID;
 import net.minecraft.core.util.helper.DamageType;
@@ -20,6 +21,7 @@ import peedog.funnyfauna.entity.ai.Task;
 import peedog.funnyfauna.entity.ai.controllers.BunnyTask;
 import peedog.funnyfauna.entity.ai.interfaces.IFleeable;
 import peedog.funnyfauna.entity.ai.interfaces.IFollower;
+import peedog.funnyfauna.item.FunnyFaunaItems;
 import turniplabs.halplibe.helper.EnvironmentHelper;
 
 import java.util.UUID;
@@ -92,7 +94,7 @@ public class MobBunny extends MobTaskrunner implements IFleeable, IFollower {
 	}
 
 	public void setSkinVariant(int variant) {
-		variant = Math.max(0, Math.min(2, variant)); // 3 variants: 0,1,2
+		variant = Math.max(0, Math.min(4, variant)); // 3 variants: 0,1,2
 		this.entityData.set(DATA_SKIN_VARIANT, variant);
 	}
 
@@ -139,15 +141,27 @@ public class MobBunny extends MobTaskrunner implements IFleeable, IFollower {
 
 	@Override
 	public boolean hurt(Entity attacker, int damage, DamageType type) {
-		boolean result = super.hurt(attacker, damage, type);
 
-		if (result && !world.isClientSide) {
-			// If hurt by an entity, run away!
-			if (attacker != null) {
-				this.setFleeTarget(attacker);
-				this.setFleeTimer(200); // Flee for 10 seconds
+		// --- Prevent owner from damaging their own bunny ---
+		if (this.isTamed() && attacker instanceof Player) {
+			Player player = (Player) attacker;
+
+			if (this.ownerUUID != null &&
+				this.ownerUUID.equals(player.uuid.toString())) {
+
+				return false; // Cancel the damage completely
 			}
 		}
+
+		// Apply normal damage
+		boolean result = super.hurt(attacker, damage, type);
+
+		// Flee logic
+		if (result && !world.isClientSide && attacker != null) {
+			this.setFleeTarget(attacker);
+			this.setFleeTimer(200);
+		}
+
 		return result;
 	}
 
@@ -156,6 +170,10 @@ public class MobBunny extends MobTaskrunner implements IFleeable, IFollower {
 		if (world.isClientSide) return;
 		// Skip AI if riding a player
 		if (this.vehicle instanceof Player) return;
+
+		if (this.onGround && (this.getMoveForward() != 0)) {
+			this.yd = 0.3;
+		}
 		super.updateAI();
 	}
 
@@ -191,8 +209,6 @@ public class MobBunny extends MobTaskrunner implements IFleeable, IFollower {
 
 	@Override
 	public void causeFallDamage(float distance) {
-		if (this.vehicle instanceof Player) return;
-		super.causeFallDamage(distance);
 	}
 
 	@Override
@@ -258,25 +274,17 @@ public class MobBunny extends MobTaskrunner implements IFleeable, IFollower {
 	@Override
 	public boolean interact(@NotNull Player player) {
 		ItemStack held = player.inventory.getCurrentItem();
+		if (!this.isTamed() && held != null && held.itemID == Items.DUST_SUGAR.id) {
 
-		// ---- Taming with Seeds ----
-		if (!this.isTamed() && held != null) {
-			// Get the internal item key (e.g., "tile.sapling.oak")
-			String itemKey = held.getItem().getKey();
-
-			// Check if the name exists and contains "sapling" (case-insensitive)
-			if (itemKey != null && itemKey.toLowerCase().contains("sapling")) {
-				// Consume the item
-				if (player.getGamemode().consumeBlocks()) {
-					player.swingItem();
-					held.stackSize--;}
+			if (player.getGamemode().consumeBlocks()) {
+				held.consumeItem(player);
 				if (held.stackSize <= 0) {
-					held = null;
+					player.inventory.setItem(player.inventory.getCurrentItemIndex(), null);
 				}
 			}
 
 			if (!this.world.isClientSide) {
-				if (this.random.nextInt(5) == 0) {
+				if (this.random.nextInt(6) == 0) {
 					this.setTamed(true);
 					this.ownerUUID = player.uuid.toString();
 					this.setHealthRaw(this.getMaxHealth());
@@ -358,14 +366,17 @@ public class MobBunny extends MobTaskrunner implements IFleeable, IFollower {
 	}
 
 	@Override
-	public String getHurtSound() {
-		return "random.hurt";
+	protected String getHurtSound() {
+		return "funnyfauna:mob.bunny.hurt";
 	}
 
 	@Override
-	public String getDeathSound() {
-		return "random.hurt";
+	protected String getDeathSound() {
+		return "funnyfauna:mob.bunny.death";
 	}
+
+	@Override
+	protected boolean makeStepSound() { return false; }
 
 	@Override
 	public @Nullable Entity leader() {
@@ -377,4 +388,6 @@ public class MobBunny extends MobTaskrunner implements IFleeable, IFollower {
 		UUID uuid = UUID.fromString(owner);
 		return this.world.getPlayerEntityByUUID(uuid);
 	}
+
+
 }

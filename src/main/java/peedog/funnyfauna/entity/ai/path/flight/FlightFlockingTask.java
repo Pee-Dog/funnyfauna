@@ -216,17 +216,58 @@ public class FlightFlockingTask<T extends MobTaskrunner & IFlyable> extends Task
 
 	private void handleHeight() {
 		double groundY = mob.getGroundY();
-		double targetY = groundY + MIN_FLIGHT_HEIGHT + Math.sin(mob.tickCount * 0.1) * 2.0; // Bobbing
+		double ceilingY = getCeilingHeight();
+
+		// Default height band relative to ground
+		double desiredMin = groundY + MIN_FLIGHT_HEIGHT;
+		double desiredMax = groundY + MAX_FLIGHT_HEIGHT;
+
+		// If there is a ceiling close enough to matter, constrain the band below it
+		final double CEILING_CLEARANCE = 3.0;
+		if (ceilingY != Double.MAX_VALUE) {
+			double safeMax = ceilingY - CEILING_CLEARANCE;
+			desiredMax = Math.min(desiredMax, safeMax);
+			// Ensure min never exceeds max (tight cave situation)
+			desiredMin = Math.min(desiredMin, desiredMax - 1.0);
+		}
+
+		// Bobbing target within the allowed band, clamped so bobbing never breaks the ceiling limit
+		double rawTarget = desiredMin + Math.sin(mob.tickCount * 0.1) * 2.0;
+		double targetY = MathHelper.clamp(rawTarget, desiredMin, desiredMax);
 
 		double dy = targetY - mob.y;
-		double liftStrength = (mob.y < groundY + MIN_FLIGHT_HEIGHT) ? 0.03 : 0.01;
+		double liftStrength = (mob.y < desiredMin) ? 0.03 : 0.01;
 
 		mob.yd += dy * liftStrength;
+
+		// Hard push away from ceiling if somehow inside clearance zone
+		if (ceilingY != Double.MAX_VALUE && mob.y > ceilingY - CEILING_CLEARANCE) {
+			mob.yd -= 0.05;
+		}
+
 		mob.yd = MathHelper.clamp(mob.yd, -0.4, 0.4);
 
 		// Friction
 		mob.xd *= 0.99;
 		mob.zd *= 0.99;
+	}
+
+	/**
+	 * Scans upward from the mob's head to find the nearest solid ceiling within 40 blocks.
+	 * Returns Double.MAX_VALUE if no ceiling is found (open sky).
+	 */
+	private double getCeilingHeight() {
+		int bx = MathHelper.floor(mob.x);
+		int bz = MathHelper.floor(mob.z);
+		int startY = MathHelper.floor(mob.y + mob.bbHeight + 0.1);
+
+		for (int by = startY; by < startY + 40; by++) {
+			int id = mob.world.getBlockId(bx, by, bz);
+			if (id != 0 && Blocks.blocksList[id] != null && Blocks.blocksList[id].isCubeShaped()) {
+				return by; // bottom face of the ceiling block
+			}
+		}
+		return Double.MAX_VALUE;
 	}
 
 	private boolean isCollidingAhead(Vec3 dir, double dist) {

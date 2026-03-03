@@ -17,6 +17,8 @@ import peedog.funnyfauna.block.BlockModelJarClosed;
 import peedog.funnyfauna.block.FunnyFaunaBlocks;
 import peedog.funnyfauna.block.entity.TileEntityEmuEgg;
 import peedog.funnyfauna.client.render.entity.*;
+import peedog.funnyfauna.client.render.item.ItemModelGlowstick;
+import peedog.funnyfauna.client.render.model.BlockModelGlowstick;
 import peedog.funnyfauna.client.render.tileentity.TileRendererEmuEgg;
 import peedog.funnyfauna.entity.ant.EntityAnt;
 import peedog.funnyfauna.entity.armadillo.MobArmadillo;
@@ -24,16 +26,21 @@ import peedog.funnyfauna.entity.bird.MobBird;
 import peedog.funnyfauna.entity.boar.MobBoar;
 import peedog.funnyfauna.entity.bunny.MobBunny;
 import peedog.funnyfauna.entity.camel.MobCamel;
+import peedog.funnyfauna.entity.chipmunk.MobChipmunk;
 import peedog.funnyfauna.entity.cricket.EntityCricket;
+import peedog.funnyfauna.entity.duck.MobDuck;
 import peedog.funnyfauna.entity.emu.MobEmu;
 import peedog.funnyfauna.entity.fox.MobFox;
 import peedog.funnyfauna.entity.horse.MobHorse;
 import peedog.funnyfauna.client.render.entity.MobRendererHorse;
 import peedog.funnyfauna.entity.lilspider.EntityLilSpider;
 import peedog.funnyfauna.entity.lizard.MobLizard;
+import peedog.funnyfauna.entity.moth.MobMoth;
 import peedog.funnyfauna.entity.mouse.MobMouse;
 import peedog.funnyfauna.entity.penguin.MobPenguin;
 import peedog.funnyfauna.entity.projectile.ProjectileBigEgg;
+import peedog.funnyfauna.entity.projectile.ProjectileGlowstick;
+import peedog.funnyfauna.entity.scorvid.MobScorvid;
 import peedog.funnyfauna.entity.tumbleweed.EntityTumbleweed;
 import peedog.funnyfauna.entity.worm.EntityWorm;
 import peedog.funnyfauna.item.FunnyFaunaItems;
@@ -45,9 +52,10 @@ import turniplabs.halplibe.util.ModelEntrypoint;
 public class FunnyFaunaModels implements ModelEntrypoint {
 	@Override
 	public void initBlockModels(BlockModelDispatcher blockModelDispatcher) {
-		ModelHelper.setBlockModel(FunnyFaunaBlocks.ANT_HILL, () -> new BlockModelStandard<>(FunnyFaunaBlocks.ANT_HILL).setAllTextures(0, "minecraft:block/sand"));
+		ModelHelper.setBlockModel(FunnyFaunaBlocks.ANT_HILL, () -> new BlockModelAxisAligned(FunnyFaunaBlocks.ANT_HILL).setTex(0, "funnyfauna:block/ant_hill", new Side[]{Side.BOTTOM}).setTex(0, "minecraft:block/sand", new Side[]{Side.NORTH, Side.EAST, Side.SOUTH, Side.WEST, Side.TOP}));
 		ModelHelper.setBlockModel(FunnyFaunaBlocks.JAR_CRICKET, () -> new BlockModelJarClosed(FunnyFaunaBlocks.JAR_CRICKET));
-		ModelHelper.setBlockModel(FunnyFaunaBlocks.HAYBALE, () -> new BlockModelAxisAligned(Blocks.LOG_OAK).setTex(0, "funnyfauna:block/haybale_top", new Side[]{Side.TOP, Side.BOTTOM}).setTex(0, "funnyfauna:block/haybale_side", new Side[]{Side.NORTH, Side.EAST, Side.SOUTH, Side.WEST}));
+		ModelHelper.setBlockModel(FunnyFaunaBlocks.HAYBALE, () -> new BlockModelAxisAligned(FunnyFaunaBlocks.HAYBALE).setTex(0, "funnyfauna:block/haybale_top", new Side[]{Side.TOP, Side.BOTTOM}).setTex(0, "funnyfauna:block/haybale_side", new Side[]{Side.NORTH, Side.EAST, Side.SOUTH, Side.WEST}));
+		ModelHelper.setBlockModel(FunnyFaunaBlocks.GLOWSTICK, () -> new BlockModelGlowstick<>(FunnyFaunaBlocks.GLOWSTICK));
 	}
 
 	@Override
@@ -61,12 +69,16 @@ public class FunnyFaunaModels implements ModelEntrypoint {
 		dispatcher.addDispatch(new ItemModelStandard(FunnyFaunaItems.FOOD_EGGEMU_COOKED, null).setIcon("funnyfauna:item/food_eggemu_cooked"));
 		dispatcher.addDispatch(new ItemModelStandard(FunnyFaunaItems.EGG_EMU, null).setIcon("funnyfauna:item/egg_emu"));
 		dispatcher.addDispatch(new ItemModelStandard(FunnyFaunaItems.JAR_CRICKET, null).setIcon("funnyfauna:item/jar_cricket"));
-		dispatcher.addDispatch(new ItemModelStandard(FunnyFaunaItems.JAR_WORM, null).setIcon("funnyfauna:item/jar_cricket"));
+		dispatcher.addDispatch(new ItemModelStandard(FunnyFaunaItems.JAR_WORM, null).setIcon("funnyfauna:item/jar_worm"));
+		dispatcher.addDispatch(new ItemModelStandard(FunnyFaunaItems.JAR_SPIDER, null).setIcon("funnyfauna:item/jar_spider"));
+		dispatcher.addDispatch(new ItemModelStandard(FunnyFaunaItems.JAR_ANT, null).setIcon("funnyfauna:item/jar_ant"));
+		dispatcher.addDispatch(new ItemModelStandard(FunnyFaunaItems.JAR_MOTH, null).setIcon("funnyfauna:item/jar_moth"));
 		dispatcher.addDispatch(new ItemModelStandard(FunnyFaunaItems.SCALES, null).setIcon("funnyfauna:item/scales"));
 		dispatcher.addDispatch(new ItemModelStandard(FunnyFaunaItems.SCALES_REINFORCED, null).setIcon("funnyfauna:item/scales_reinforced"));
 		dispatcher.addDispatch(new ItemModelStandard(FunnyFaunaItems.SCUTE, null).setIcon("funnyfauna:item/scute"));
+		dispatcher.addDispatch(new ItemModelGlowstick(FunnyFaunaItems.GLOWSTICK));
 		dispatcher.addDispatch(new ItemModelStandard(FunnyFaunaItems.TUMBLEWEED, null).setIcon("funnyfauna:item/tumbleweed"));
-		dispatcher.addDispatch(new ItemModelStandard(FunnyFaunaItems.TUMBLEWEED, null).setIcon("funnyfauna:item/tumbleweed"));
+		dispatcher.addDispatch(new ItemModelStandard(FunnyFaunaItems.DUST_CHITIN, null).setIcon("funnyfauna:item/dust_chitin"));
 		dispatcher.addDispatch(new ItemModelStandard(FunnyFaunaItems.BIOME_COMPASS, null).setIcon("funnyfauna:item/biome_compass"));
 		dispatcher.addDispatch(new ItemModelStandard(FunnyFaunaItems.ARM_EXTENSION, null) {
 			private final IconCoordinate OFF =
@@ -120,6 +132,7 @@ public class FunnyFaunaModels implements ModelEntrypoint {
 		ModelHelper.setEntityModel(MobArmadillo.class, MobRendererArmadillo::new);
 		ModelHelper.setEntityModel(MobBoar.class, MobRendererBoar::new);
 		ModelHelper.setEntityModel(ProjectileBigEgg.class, EntityRendererBigEgg::new);
+		ModelHelper.setEntityModel(ProjectileGlowstick.class, EntityRendererGlowstick::new);
 		ModelHelper.setEntityModel(EntityAnt.class, EntityRendererAnt::new);
 		ModelHelper.setEntityModel(EntityCricket.class, EntityRendererCricket::new);
 		ModelHelper.setEntityModel(EntityLilSpider.class, EntityRendererLilSpider::new);
@@ -129,6 +142,10 @@ public class FunnyFaunaModels implements ModelEntrypoint {
 		ModelHelper.setEntityModel(MobFox.class, MobRendererFox::new);
 		ModelHelper.setEntityModel(MobMouse.class, MobRendererMouse::new);
 		ModelHelper.setEntityModel(MobBunny.class, MobRendererBunny::new);
+		ModelHelper.setEntityModel(MobMoth.class, MobRendererMoth::new);
+		ModelHelper.setEntityModel(MobChipmunk.class, MobRendererChipmunk::new);
+		ModelHelper.setEntityModel(MobDuck.class, MobRendererDuck::new);
+		ModelHelper.setEntityModel(MobScorvid.class, MobRendererScorvid::new);
 
 
 	}

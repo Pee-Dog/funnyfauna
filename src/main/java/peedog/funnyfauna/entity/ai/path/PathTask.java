@@ -13,6 +13,15 @@ public abstract class PathTask<T extends MobTaskrunner> extends Task<T> {
 	public float moveSpeed = 0.7F;
 	private boolean keepJumping;
 
+	/**
+	 * Controls whether this task triggers a jump when the mob hits a wall
+	 * (horizontalCollision). True by default to preserve vanilla-style
+	 * obstacle-hopping for all existing tasks. Set to false in tasks where
+	 * collision-jumping is undesirable (e.g. LeafLeapTask, where it caused
+	 * chipmunks to bounce repeatedly against leaf walls).
+	 */
+	protected boolean shouldJumpOnCollision = true;
+
 	public PathTask(T mob) {
 		super(mob);
 	}
@@ -86,7 +95,7 @@ public abstract class PathTask<T extends MobTaskrunner> extends Task<T> {
 					}
 				}
 
-				if (this.mob.horizontalCollision) {
+				if (this.mob.horizontalCollision && shouldJumpOnCollision) {
 					this.mob.startJumping();
 				}
 			} else {

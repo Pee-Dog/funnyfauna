@@ -3,6 +3,7 @@ package peedog.funnyfauna.entity.armadillo;
 import net.minecraft.core.entity.Entity;
 import net.minecraft.core.util.collection.NamespaceID;
 import net.minecraft.core.util.helper.DamageType;
+import net.minecraft.core.util.helper.MathHelper;
 import net.minecraft.core.world.World;
 import net.minecraft.core.WeightedRandomLootObject;
 import peedog.funnyfauna.entity.MobTaskrunner;
@@ -72,6 +73,21 @@ public class MobArmadillo extends MobTaskrunner implements IFleeable {
 
 		return super.hurt(attacker, damage, type);
 	}
+	public boolean canSpawnHere() {
+		int x = MathHelper.floor(this.x);
+		int y = MathHelper.floor(this.bb.minY);
+		int z = MathHelper.floor(this.z);
+
+		int id = this.world.getBlockId(x, y - 1, z);
+
+		// Prevent spawning on air, water, lava
+		if (id == 0 || id == 8 || id == 9 || id == 10 || id == 11 || y < 128) {
+			return false;
+		}
+
+		// Allow spawning on any other block
+		return true;
+	}
 
 	// IFleeable Implementation
 	@Override public int getFleeTimer() { return fleeTimer; }
@@ -82,4 +98,19 @@ public class MobArmadillo extends MobTaskrunner implements IFleeable {
 	@Override public int getMaxHealth() { return 16; }
 
 	public float cowerProgress(float partialTick) {return cowerProgress;}
+
+	@Override
+	public String getLivingSound() {
+		return "funnyfauna:mob.armadillo.idle";
+	}
+
+	@Override
+	protected String getHurtSound() {
+		return "funnyfauna:mob.armadillo.idle";
+	}
+
+	@Override
+	protected String getDeathSound() {
+		return "funnyfauna:mob.armadillo.idle";
+	}
 }

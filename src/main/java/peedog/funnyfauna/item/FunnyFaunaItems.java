@@ -4,7 +4,10 @@ import net.minecraft.core.block.Blocks;
 import net.minecraft.core.item.Item;
 import net.minecraft.core.item.ItemFood;
 import peedog.funnyfauna.block.FunnyFaunaBlocks;
+import peedog.funnyfauna.entity.ant.EntityAnt;
 import peedog.funnyfauna.entity.cricket.EntityCricket;
+import peedog.funnyfauna.entity.lilspider.EntityLilSpider;
+import peedog.funnyfauna.entity.moth.MobMoth;
 import peedog.funnyfauna.entity.worm.EntityWorm;
 import turniplabs.halplibe.helper.ItemBuilder;
 
@@ -32,6 +35,11 @@ public class FunnyFaunaItems {
 	public static Item SCALES_REINFORCED;
 	public static Item BIOME_COMPASS;
 	public static Item JAR_WORM;
+	public static Item JAR_SPIDER;
+	public static Item JAR_ANT;
+	public static Item JAR_MOTH;
+	public static Item GLOWSTICK;
+	public static Item DUST_CHITIN;
 
 
 
@@ -53,6 +61,8 @@ public class FunnyFaunaItems {
 			.build(new Item("oil", "funnyfauna:item/oil", itemID++));
 		EGG_EMU = new ItemBuilder(MOD_ID)
 			.build(new ItemBigEgg("egg.emu", "funnyfauna:item/egg_emu", itemID++));
+		GLOWSTICK = new ItemBuilder(MOD_ID)
+			.build(new ItemGlowstick("glowstick", "funnyfauna:item/glowstick", itemID++));
 		JAR_CRICKET = new ItemBuilder(MOD_ID)
 			.build(new ItemJarAnimal(
 				"jar.cricket",
@@ -69,12 +79,38 @@ public class FunnyFaunaItems {
 				() -> FunnyFaunaBlocks.JAR_CRICKET,   // placed block
 				(world, player) -> new EntityWorm(world) // released entity
 			));
+		JAR_SPIDER = new ItemBuilder(MOD_ID)
+			.build(new ItemJarAnimal(
+				"jar.spider",
+				"funnyfauna:item/jar_spider",
+				itemID++,
+				() -> FunnyFaunaBlocks.JAR_CRICKET,   // placed block
+				(world, player) -> new EntityLilSpider(world) // released entity
+			));
+		JAR_ANT = new ItemBuilder(MOD_ID)
+			.build(new ItemJarAnimal(
+				"jar.ant",
+				"funnyfauna:item/jar_ant",
+				itemID++,
+				() -> FunnyFaunaBlocks.JAR_CRICKET,   // placed block
+				(world, player) -> new EntityAnt(world) // released entity
+			));
+		JAR_MOTH = new ItemBuilder(MOD_ID)
+			.build(new ItemJarAnimal(
+				"jar.moth",
+				"funnyfauna:item/jar_moth",
+				itemID++,
+				() -> FunnyFaunaBlocks.JAR_CRICKET,   // placed block
+				(world, player) -> new MobMoth(world) // released entity
+			));
 		SCALES = new ItemBuilder(MOD_ID)
 			.build(new ItemScales("scales", "funnyfauna:item/scales", itemID++));
 		SCALES_REINFORCED = new ItemBuilder(MOD_ID)
 			.build(new ItemReinforcedScales("scales.reinforced", "funnyfauna:item/scales_reinforced", itemID++));
 		SCUTE = new ItemBuilder(MOD_ID)
 			.build(new Item("scute", "funnyfauna:item/scute", itemID++));
+		DUST_CHITIN = new ItemBuilder(MOD_ID)
+			.build(new Item("dust.chitin", "funnyfauna:item/dust_chitin", itemID++));
 		TUMBLEWEED = new ItemBuilder(MOD_ID)
 			.build(new ItemTumbleweed("tumbleweed", "funnyfauna:item/tumbleweed", itemID++));
 		BIOME_COMPASS = new ItemBuilder(MOD_ID)

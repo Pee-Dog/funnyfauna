@@ -19,10 +19,14 @@ import org.jetbrains.annotations.Nullable;
 import peedog.funnyfauna.entity.MobTaskrunner;
 import peedog.funnyfauna.entity.ai.controllers.LizardTask;
 import peedog.funnyfauna.entity.ai.Task;
+import peedog.funnyfauna.entity.ai.interfaces.IFleeable;
 import peedog.funnyfauna.item.FunnyFaunaItems;
 import turniplabs.halplibe.helper.EnvironmentHelper;
 
-public class MobLizard extends MobTaskrunner {
+import java.util.List;
+import java.util.Objects;
+
+public class MobLizard extends MobTaskrunner implements IFleeable {
 
 	private static final int DATA_FLAGS = 16;
 	private static final int DATA_OWNER_UUID = 17;
@@ -31,6 +35,10 @@ public class MobLizard extends MobTaskrunner {
 	private @Nullable Entity preyTarget = null;
 	private @Nullable Path pathToEntity = null;
 	private @Nullable String ownerUUID = null;
+
+	// Fleeing data
+	private Entity fleeTarget = null;
+	private int fleeTimer = 0;
 
 	private int ridingCooldown = 20;
 	private boolean wasEjected = false;
@@ -98,16 +106,44 @@ public class MobLizard extends MobTaskrunner {
 		return 6;
 	}
 
-
-
+	// --- IFleeable implementation ---
+	@Override
+	public Entity getFleeTarget() {
+		return this.fleeTarget;
+	}
 
 	@Override
+	public void setFleeTarget(Entity entity) {
+		this.fleeTarget = entity;
+	}
+
+	@Override
+	public int getFleeTimer() {
+		return this.fleeTimer;
+	}
+
+	@Override
+	public void setFleeTimer(int i) {
+		this.fleeTimer = i;
+	}
+
+
+
+
 	public boolean canSpawnHere() {
 		int x = MathHelper.floor(this.x);
 		int y = MathHelper.floor(this.bb.minY);
 		int z = MathHelper.floor(this.z);
+
 		int id = this.world.getBlockId(x, y - 1, z);
-		return id != 0 && id != 8 && id != 9 && id != 10 && id != 11;
+
+		// Prevent spawning on air, water, lava
+		if (id == 0 || id == 8 || id == 9 || id == 10 || id == 11 || y < 128) {
+			return false;
+		}
+
+		// Allow spawning on any other block
+		return true;
 	}
 
 	@Override
@@ -360,7 +396,41 @@ public class MobLizard extends MobTaskrunner {
 			this.setHasTail(true);
 		}
 
+		// When tailless, scan for nearby mobs to flee from
+		if (!world.isClientSide && !this.hasTail()) {
+			// Decrement existing flee timer
+			if (this.fleeTimer > 0) {
+				this.fleeTimer--;
+			}
 
+			// Periodically scan for threats (every ~10 ticks)
+			if (this.random.nextInt(10) == 0) {
+				List<Entity> nearby = this.world.getEntitiesWithinAABBExcludingEntity(
+					this,
+					this.bb.expand(8.0, 4.0, 8.0)
+				);
+
+				Entity closest = null;
+				double closestDist = Double.MAX_VALUE;
+
+				for (Entity e : nearby) {
+					// Ignore players (owner can be trusted), items, and other lizards
+					if ((e instanceof Player && Objects.equals(((Player) e).uuid.toString(), ownerUUID)) || e == this) continue;
+					if (!(e instanceof net.minecraft.core.entity.Mob)) continue;
+
+					double dist = this.distanceTo(e);
+					if (dist < closestDist) {
+						closestDist = dist;
+						closest = e;
+					}
+				}
+
+				if (closest != null) {
+					this.setFleeTarget(closest);
+					this.setFleeTimer(100); // flee for 5 seconds
+				}
+			}
+		}
 	}
 	@Override
 	public void addAdditionalSaveData(CompoundTag tag) {

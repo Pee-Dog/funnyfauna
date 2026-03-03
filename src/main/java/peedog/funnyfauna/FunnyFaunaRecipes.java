@@ -64,6 +64,10 @@ public class FunnyFaunaRecipes implements RecipeEntrypoint {
 			.addInput(FunnyFaunaItems.FOOD_LIZARDTAIL)
 			.create("scales", scales);
 		scales.stackSize = 2;
+		RecipeBuilder.Shapeless(MOD_ID)
+			.addInput(Blocks.TORCH_COAL)
+			.addInput(FunnyFaunaItems.DUST_CHITIN)
+			.create("glowstick", FunnyFaunaItems.GLOWSTICK.getDefaultStack());
 	}
 
 	@Override

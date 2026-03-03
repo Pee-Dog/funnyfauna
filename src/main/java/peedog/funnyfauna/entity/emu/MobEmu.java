@@ -40,7 +40,7 @@ public class MobEmu extends MobAnimal {
 		int id = this.world.getBlockId(x, y - 1, z);
 
 		// Prevent spawning on air, water, lava
-		if (id == 0 || id == 8 || id == 9 || id == 10 || id == 11) {
+		if (id == 0 || id == 8 || id == 9 || id == 10 || id == 11 || y < 128) {
 			return false;
 		}
 

@@ -439,6 +439,22 @@ public class MobHorse extends MobFunnyRideable {
 		}
 	}
 
+	public boolean canSpawnHere() {
+		int x = MathHelper.floor(this.x);
+		int y = MathHelper.floor(this.bb.minY);
+		int z = MathHelper.floor(this.z);
+
+		int id = this.world.getBlockId(x, y - 1, z);
+
+		// Prevent spawning on air, water, lava
+		if (id == 0 || id == 8 || id == 9 || id == 10 || id == 11 || y < 128) {
+			return false;
+		}
+
+		// Allow spawning on any other block
+		return true;
+	}
+
 	/** Converts current jumpStrength back into approximate jump height in blocks */
 	public float getJumpHeight() {
 		return (jumpStrength * jumpStrength) / (2 * gravity);

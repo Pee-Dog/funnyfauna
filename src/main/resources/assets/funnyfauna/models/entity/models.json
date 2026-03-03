@@ -7,7 +7,12 @@
     "/assets/funnyfauna/models/entity/bird.geo.json",
     "/assets/funnyfauna/models/entity/fox.geo.json",
     "/assets/funnyfauna/models/entity/mouse.geo.json",
-    "/assets/funnyfauna/models/entity/bunny.geo.json"
+    "/assets/funnyfauna/models/entity/bunny.geo.json",
+    "/assets/funnyfauna/models/entity/moth.geo.json",
+    "/assets/funnyfauna/models/entity/chipmunk.geo.json",
+    "/assets/funnyfauna/models/entity/duck.geo.json",
+    "/assets/funnyfauna/models/entity/scorvid.geo.json",
+    "/assets/funnyfauna/models/entity/scorvid_flying.geo.json"
   ],
   "renderers": {
     "funnyfauna:horse": {
@@ -33,6 +38,19 @@
     },
     "funnyfauna:bunny": {
       "main": "geometry.bunny"
+    },
+    "funnyfauna:moth": {
+      "main": "geometry.moth"
+    },
+    "funnyfauna:chipmunk": {
+      "main": "geometry.chipmunk"
+    },
+    "funnyfauna:duck": {
+      "main": "geometry.duck"
+    },
+    "funnyfauna:scorvid": {
+      "main": "geometry.scorvid",
+      "flying": "geometry.scorvid_flying"
     }
   }
 }

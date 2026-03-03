@@ -4,6 +4,9 @@ import net.minecraft.core.block.Block;
 import net.minecraft.core.block.BlockLogic;
 import net.minecraft.core.block.BlockLogicAxisAligned;
 import net.minecraft.core.block.material.Material;
+import net.minecraft.core.block.tag.BlockTags;
+import net.minecraft.core.data.tag.Tag;
+import net.minecraft.core.item.Items;
 import net.minecraft.core.sound.BlockSounds;
 import peedog.funnyfauna.item.FunnyFaunaItems;
 import turniplabs.halplibe.helper.BlockBuilder;
@@ -20,7 +23,7 @@ public final class FunnyFaunaBlocks implements BlockInitEntrypoint {
 	public static Block<?> JAR_CRICKET;
 	public static Block<?> CACTUS_GOLDEN;
 	public static Block<?> HAYBALE;
-
+	public static Block<?> GLOWSTICK;
 
 	public static void init() {
 		if (!hasInit) {
@@ -52,7 +55,15 @@ public final class FunnyFaunaBlocks implements BlockInitEntrypoint {
 			.setHardness(0.2f)
 			.setResistance(0.2f)
 			.build("haybale", "haybale", blockID++, block -> new BlockLogicAxisAligned(block, Material.grass));
-
+		GLOWSTICK = new BlockBuilder(MOD_ID)
+			.setBlockSound(BlockSounds.GLASS)
+			.setHardness(0.0f)
+			.setLuminance(13)
+			.setTicking(true)
+			.setResistance(0.1f)
+			.addTags(new Tag[]{BlockTags.BROKEN_BY_FLUIDS})
+			.build("glowstick", "glowstick", blockID++, block -> new BlockLogicGlowstick(block));
+		GLOWSTICK.setStatParent(() -> FunnyFaunaItems.GLOWSTICK);
 	}
 
 	@Override

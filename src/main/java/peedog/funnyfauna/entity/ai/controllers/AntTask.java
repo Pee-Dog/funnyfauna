@@ -11,6 +11,7 @@ public class AntTask extends Task<EntityAnt> {
 	private final WanderTask<EntityAnt> wanderTask;
 	private final ReturnHomeTask<EntityAnt> homeTask;
 	private final ItemCollectorTask<EntityAnt> itemCollectorTask;
+	private final WanderNearHomeTask<EntityAnt> wanderNearHomeTask;
 
 	// 0 = Forage, 1 = Return with item, 2 = Return empty
 	private int state = 0;
@@ -22,6 +23,8 @@ public class AntTask extends Task<EntityAnt> {
 		this.wanderTask = new WanderTask<>(mob);
 		this.homeTask = new ReturnHomeTask<>(mob);
 		this.itemCollectorTask = new ItemCollectorTask<>(mob);
+		this.wanderNearHomeTask = new WanderNearHomeTask<>(mob, 12); // 12 block radius
+
 	}
 
 	@Override
@@ -87,8 +90,13 @@ public class AntTask extends Task<EntityAnt> {
 			}
 		}
 
-		// Default: wander
+		// Default: wander (near home if we have one)
+		if (hasHome) {
+			return wanderNearHomeTask;
+		}
+
 		return wanderTask;
+
 	}
 
 	@Override

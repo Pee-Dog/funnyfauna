@@ -82,6 +82,7 @@ public class EntityRendererAnt extends EntityRenderer<EntityAnt> {
 
 				float scale = 0.375F;
 				GL11.glScalef(scale, scale, scale);
+				GL11.glTranslatef(0.5F, .1F, 0.25F);
 				GL11.glRotatef(50F, 0F, 0F, 1F);
 				GL11.glRotatef(-90F, 1F, 0F, 0F);
 				GL11.glRotatef(30F, 1F, 0F, 1F);

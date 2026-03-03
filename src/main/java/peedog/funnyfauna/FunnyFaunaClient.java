@@ -26,9 +26,7 @@ import peedog.funnyfauna.entity.horse.MobHorse;
 import peedog.funnyfauna.entity.lizard.MobLizard;
 import peedog.funnyfauna.gui.HudEquippedSlot;
 import peedog.funnyfauna.item.FunnyFaunaItems;
-import peedog.funnyfauna.particle.ParticleBugSquash;
-import peedog.funnyfauna.particle.ParticleBugs;
-import peedog.funnyfauna.particle.ParticleCricket;
+import peedog.funnyfauna.particle.*;
 import turniplabs.halplibe.helper.TextureHelper;
 import turniplabs.halplibe.util.ClientStartEntrypoint;
 
@@ -58,20 +56,13 @@ public class FunnyFaunaClient implements ClientModInitializer, ClientStartEntryp
 			} catch (Exception ignored) {}
 			return new ParticleCricket(world, x, y, z, color);
 		});
-
-
-
-
-
-
-
-
-
-
+		dispatcher.addDispatch("webspider", (world, x, y, z, xa, ya, za, data) -> new ParticleWebSpider(world, x, y, z));
 
 		dispatcher.addDispatch("bug_squash", (world, x, y, z, xd, yd, zd, data) ->
 			new ParticleBugSquash(world, x, y, z, xd, yd, zd, 0.4F)
 		);
+		dispatcher.addDispatch("glow", ParticleGlow::new);
+		dispatcher.addDispatch("plume", ParticlePlume::new);
 
 
 

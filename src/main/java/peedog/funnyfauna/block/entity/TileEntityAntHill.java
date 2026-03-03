@@ -8,6 +8,10 @@ import net.minecraft.core.item.ItemStack;
 import net.minecraft.core.player.inventory.container.Container;
 import net.minecraft.core.util.phys.AABB;
 import net.minecraft.core.world.World;
+import net.minecraft.core.world.season.SeasonManager;
+import net.minecraft.core.world.season.SeasonWinter;
+import net.minecraft.core.world.season.Seasons;
+import net.minecraft.core.world.type.WorldTypes;
 import org.jetbrains.annotations.Nullable;
 import peedog.funnyfauna.entity.ant.EntityAnt;
 
@@ -26,6 +30,16 @@ public class TileEntityAntHill extends TileEntity implements Container {
 
 	private int checkTimer = 0;
 
+	// Add this field
+	public boolean silkTouchPickup = false;
+
+	// Add this getter
+	public List<CompoundTag> getStoredAnts() {
+		return storedAnts;
+	}
+
+	// Inside TileEntityAntHill.java
+
 	@Override
 	public void tick() {
 		super.tick();
@@ -38,10 +52,31 @@ public class TileEntityAntHill extends TileEntity implements Container {
 			checkForNearbyAnts();
 		}
 
-		// Randomly release one ant
-		if (getStoredAntCount() > 0 && worldObj.rand.nextInt(100) == 0) {
+		// MODIFIED: Added environmental checks
+		if (getStoredAntCount() > 0 && canReleaseAnts() && worldObj.rand.nextInt(100) == 0) {
 			releaseAnts(worldObj, 1);
 		}
+	}
+
+	private boolean canReleaseAnts() {
+		// 1. Check for Winter (BTA specific WorldType check)
+		if (worldObj.getSeasonManager().getCurrentSeason() == Seasons.OVERWORLD_WINTER) {
+			return false;
+		}
+
+		// 2. Check Light Level (Too dark)
+		// 8 is usually the threshold where hostile mobs spawn; good for "daylight" creatures
+		if (worldObj.getBlockLightValue(x, y + 1, z) < 8) {
+			return false;
+		}
+
+		// 3. Check Rain + Sky access
+		// If it's raining AND the block can see the sky, it's getting wet.
+		if (worldObj.canBlockBeRainedOn(x, y + 1, z)) {
+			return false;
+		}
+
+		return true;
 	}
 
 	private void checkForNearbyAnts() {
@@ -74,7 +109,7 @@ public class TileEntityAntHill extends TileEntity implements Container {
 		if (ant.getHomeX() != this.x || ant.getHomeY() != this.y || ant.getHomeZ() != this.z) return;
 
 		// Must be close AND past the exit cooldown
-		if (distanceSq < 4.0) {
+		if (distanceSq < 1.0) {
 			storeAnt(ant);
 		}
 	}
@@ -88,11 +123,11 @@ public class TileEntityAntHill extends TileEntity implements Container {
 	public boolean storeAnt(EntityAnt ant) {
 		if (storedAnts.size() >= MAX_ANTS) return false;
 
+		ItemStack heldItem = ant.getHeldItem();
 		// Don't absorb ants that were just released
-		if (ant.exitCooldown > 0) return false;
+		if (ant.exitCooldown > 0 && heldItem == null) return false;
 
 		// Deposit any carried item into the hill's inventory
-		ItemStack heldItem = ant.getHeldItem();
 		if (heldItem != null && heldItem.stackSize > 0) {
 			addItemToInventory(heldItem.copy());
 			ant.setHeldItem(null);
@@ -133,9 +168,9 @@ public class TileEntityAntHill extends TileEntity implements Container {
 		EntityAnt ant = new EntityAnt(world);
 		ant.readAdditionalSaveData(antData);
 
-		double spawnX = this.x + 0.5 + (world.rand.nextDouble() - 0.5) * 2.0;
+		double spawnX = this.x + 0.5;
 		double spawnY = this.y + 1.0;
-		double spawnZ = this.z + 0.5 + (world.rand.nextDouble() - 0.5) * 2.0;
+		double spawnZ = this.z + 0.5;
 
 		ant.setPos(spawnX, spawnY, spawnZ);
 		ant.setHome(this.x, this.y, this.z);
@@ -144,6 +179,23 @@ public class TileEntityAntHill extends TileEntity implements Container {
 		ant.exitCooldown = EXIT_COOLDOWN_TICKS;
 
 		world.entityJoinedWorld(ant);
+	}
+
+	public void populateWithDefaultAnts(int count) {
+		if (this.worldObj == null) return;
+
+		for (int i = 0; i < count; i++) {
+			if (this.storedAnts.size() >= MAX_ANTS) break; // Respect the limit
+
+			// Create a temporary ant to generate the default NBT data
+			EntityAnt tempAnt = new EntityAnt(this.worldObj);
+			CompoundTag antData = new CompoundTag();
+			tempAnt.addAdditionalSaveData(antData);
+
+			// Add to storage and mark tile as changed for saving
+			this.storedAnts.add(antData);
+		}
+		this.setChanged();
 	}
 
 	// --- Item Helpers ---

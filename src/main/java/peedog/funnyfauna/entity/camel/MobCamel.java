@@ -413,13 +413,20 @@ public class MobCamel extends MobFunnyRideable {
 		baby.moveTo(x, y, z, 0, 0);
 		world.entityJoinedWorld(baby);
 	}
-	@Override
 	public boolean canSpawnHere() {
 		int x = MathHelper.floor(this.x);
 		int y = MathHelper.floor(this.bb.minY);
 		int z = MathHelper.floor(this.z);
+
 		int id = this.world.getBlockId(x, y - 1, z);
-		return id != 0 && id != 8 && id != 9 && id != 10 && id != 11;
+
+		// Prevent spawning on air, water, lava
+		if (id == 0 || id == 8 || id == 9 || id == 10 || id == 11 || y < 128) {
+			return false;
+		}
+
+		// Allow spawning on any other block
+		return true;
 	}
 
 	@Override

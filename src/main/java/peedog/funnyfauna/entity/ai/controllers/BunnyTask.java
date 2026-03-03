@@ -19,7 +19,6 @@ public class BunnyTask extends Task<MobBunny> {
 
 		// Setup IdleTask with hopping enabled
 		this.idleTask = new IdleTask<>(mob);
-		this.idleTask.shouldHop = true;
 		this.idleTask.shouldWander = true;
 		this.followPlayerTask = new FollowPlayerTask<>(mob);
 	}

@@ -37,9 +37,14 @@ public class ChaseAndAttackTask<T extends MobTaskrunner> extends PathTask<T> {
 			return null;
 		}
 
+		// --- NEW: Prevent sinking by forcing the mob to swim ---
+		if (mob.isInWater() || mob.isInLava()) {
+			mob.startJumping();
+		}
+		// -------------------------------------------------------
+
 		// Pathfind toward target
 		this.path = mob.world.getPathToEntity(mob, target, sightRadius);
-
 
 		// If mob implements IAttacker → attack logic
 		if (mob instanceof IAttacker) {
@@ -50,15 +55,10 @@ public class ChaseAndAttackTask<T extends MobTaskrunner> extends PathTask<T> {
 			if (distance <= attacker.getAttackRange() && mob.canEntityBeSeen(target) && attacker.getAttackCooldown() <= 0) {
 				attacker.startAttack(target);
 			}
-
 		}
-
-
 
 		return super.onTick();
 	}
-
-
 
 	@Override
 	protected boolean isEqual(Task other) {

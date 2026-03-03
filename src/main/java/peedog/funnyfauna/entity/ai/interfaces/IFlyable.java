@@ -1,6 +1,6 @@
 package peedog.funnyfauna.entity.ai.interfaces;
 
-public interface IFlyable {
+public interface   IFlyable {
 	boolean isFlying();
 	void setFlying(boolean flying);
 

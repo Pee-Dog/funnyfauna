@@ -17,8 +17,14 @@ import java.util.List;
 /**
  * Compound task that manages all flight behaviors for flying mobs.
  * Delegates to subtasks: Flocking, Solo Perch Seeking, and Landing.
+ *
+ * Subclasses can override the hook methods to customise landing behaviour:
+ *   {@link #isValidLandingBlock(Block)} - which blocks are valid surfaces
+ *   {@link #prefersLeaves()}            - whether early flight targets leaf blocks
+ *   {@link #canUseSoloPerch()}          - whether solo perch seeking is permitted
  */
 public class FlightTask<T extends MobTaskrunner & IFlyable> extends Task<T> {
+
 	private final FlightFlockingTask<T> flockingTask;
 	private final FlightSoloPerchTask<T> soloPerchTask;
 	private final LandingTask<T> landingTask;
@@ -40,9 +46,10 @@ public class FlightTask<T extends MobTaskrunner & IFlyable> extends Task<T> {
 		this.landingTarget = target;
 	}
 
+	// ================= TASK LIFECYCLE =================
+
 	@Override
 	protected void onStart() {
-		// Initialize flight
 		if (!mob.isFlying()) {
 			mob.setFlying(true);
 			mob.setFlightTime(0);
@@ -52,17 +59,14 @@ public class FlightTask<T extends MobTaskrunner & IFlyable> extends Task<T> {
 
 	@Override
 	protected Task onTick() {
-		// Increment flight time
 		mob.setFlightTime(mob.getFlightTime() + 1);
 
-		// Fix Issue 1: If landing flag is set but no target, create one
+		// If landing flag is set but no target, try to create one
 		if (mob.isLanding() && landingTarget == null) {
-			// Try to find a landing spot using the same logic
 			ServerBlockPos3D target = findSafeLandingSpot(mob.getFlightTime());
 			if (target != null) {
 				landingTarget = target;
 			} else {
-				// Can't find landing spot, abort landing
 				mob.setLanding(false);
 			}
 		}
@@ -72,8 +76,8 @@ public class FlightTask<T extends MobTaskrunner & IFlyable> extends Task<T> {
 			return landingTask;
 		}
 
-		// Priority 2: Solo perch seeking (if mob is IFlockable and flying solo)
-		if (mob instanceof IFlockable && ((IFlockable) mob).isSoloFlying()) {
+		// Priority 2: Solo perch seeking (opt-in per subclass)
+		if (canUseSoloPerch() && mob instanceof IFlockable && ((IFlockable) mob).isSoloFlying()) {
 			return soloPerchTask;
 		}
 
@@ -84,62 +88,43 @@ public class FlightTask<T extends MobTaskrunner & IFlyable> extends Task<T> {
 			}
 		}
 
-		// Priority 4: Flocking flight (default flying behavior)
+		// Priority 4: Flocking flight (default)
 		return flockingTask;
 	}
 
-	private boolean shouldAttemptLanding() {
+	@Override
+	protected void onStop(Task interruptTask) {
+		// Don't cancel flight when handing off to LandingTask — the mob is still physically
+		// airborne and needs to keep its flying hitbox until completeLanding() fires.
+		if (interruptTask != null
+			&& !(interruptTask instanceof FlightTask)
+			&& !(interruptTask instanceof LandingTask)) {
+			mob.setFlying(false);
+			mob.setFlightTime(0);
+		}
+	}
+
+	@Override
+	protected boolean isEqual(Task other) {
+		return other instanceof FlightTask;
+	}
+
+	// ================= LANDING LOGIC =================
+
+	protected boolean shouldAttemptLanding() {
 		int flightTime = mob.getFlightTime();
-
-		// Don't land immediately
 		if (flightTime < 200) return false;
-
-		// NEW: Don't even try to land if currently over water
-		if (isOverWater()) return false;
-
-		// Random chance to attempt landing
+		if (isOverInvalidGround()) return false;
 		return this.random.nextInt(100) == 0;
 	}
 
-	// Check if the bird is currently flying over water
-	private boolean isOverWater() {
-		int bx = MathHelper.floor(mob.x);
-		int bz = MathHelper.floor(mob.z);
-
-		// Scan downward from current position
-		for (int by = MathHelper.floor(mob.y) - 1; by >= Math.max(0, MathHelper.floor(mob.y) - 30); by--) {
-			int id = mob.world.getBlockId(bx, by, bz);
-			if (id != 0) {
-				Block block = Blocks.blocksList[id];
-				if (block != null) {
-					// Found water or lava - we're over it
-					if (block.getMaterial() == Material.water || block.getMaterial() == Material.lava) {
-						return true;
-					}
-					// Found solid ground or leaves - we're NOT over water
-					if (block.isCubeShaped() || block.getMaterial() == Material.leaves) {
-						return false;
-					}
-				}
-			}
-		}
-		// Default to false if nothing found below
-		return false;
-	}
-
 	private boolean tryInitiateLanding() {
-		int flightTime = mob.getFlightTime();
-
-		// First, try to find a valid landing spot (checking current and nearby positions)
-		ServerBlockPos3D target = findSafeLandingSpot(flightTime);
-
+		ServerBlockPos3D target = findSafeLandingSpot(mob.getFlightTime());
 		if (target == null) return false;
 
-		// Set landing target on the task
 		this.landingTarget = target;
 		mob.setLanding(true);
 
-		// Signal nearby flockmates to land too (if this mob is flockable)
 		if (mob instanceof IFlockable) {
 			alertFlockToLand(target);
 		}
@@ -147,28 +132,15 @@ public class FlightTask<T extends MobTaskrunner & IFlyable> extends Task<T> {
 		return true;
 	}
 
-	// New method to find safe landing spot, checking multiple positions
-	private ServerBlockPos3D findSafeLandingSpot(int flightTime) {
-		// Try current position first
+	protected ServerBlockPos3D findSafeLandingSpot(int flightTime) {
 		int bx = MathHelper.floor(mob.x);
 		int bz = MathHelper.floor(mob.z);
 
-		double landingY = -1;
-
-		// After 10-20 seconds: prefer leaves
-		if (flightTime > 200 && flightTime <= 400) {
-			landingY = getLandingHeightOnLeavesAt(bx, bz);
-		}
-		// After 20+ seconds: any ground (but not water)
-		else if (flightTime > 400) {
-			landingY = getLandingHeightAt(bx, bz);
-		}
-
+		double landingY = findLandingHeightAt(bx, bz, flightTime);
 		if (landingY != -1) {
 			return new ServerBlockPos3D(bx, (int) landingY, bz);
 		}
 
-		// Current position is bad (probably water), try nearby positions
 		int[][] offsets = {
 			{1, 0}, {-1, 0}, {0, 1}, {0, -1},
 			{1, 1}, {-1, -1}, {1, -1}, {-1, 1},
@@ -176,25 +148,91 @@ public class FlightTask<T extends MobTaskrunner & IFlyable> extends Task<T> {
 		};
 
 		for (int[] offset : offsets) {
-			int checkX = bx + offset[0];
-			int checkZ = bz + offset[1];
-
-			if (flightTime > 200 && flightTime <= 400) {
-				landingY = getLandingHeightOnLeavesAt(checkX, checkZ);
-			} else if (flightTime > 400) {
-				landingY = getLandingHeightAt(checkX, checkZ);
-			}
-
+			landingY = findLandingHeightAt(bx + offset[0], bz + offset[1], flightTime);
 			if (landingY != -1) {
-				return new ServerBlockPos3D(checkX, (int) landingY, checkZ);
+				return new ServerBlockPos3D(bx + offset[0], (int) landingY, bz + offset[1]);
 			}
 		}
 
-		// No valid landing spot found
 		return null;
 	}
 
-	// Fix Issue 1: Properly notify flock members to land with targets
+	private double findLandingHeightAt(int bx, int bz, int flightTime) {
+		if (prefersLeaves() && flightTime > 200 && flightTime <= 400) {
+			return getLandingHeightOnLeavesAt(bx, bz);
+		}
+		if (flightTime > 200) {
+			return getLandingHeightAt(bx, bz);
+		}
+		return -1;
+	}
+
+	private double getLandingHeightAt(int bx, int bz) {
+		for (int by = MathHelper.floor(mob.y) - 1; by >= 0; by--) {
+			int id = mob.world.getBlockId(bx, by, bz);
+			if (id != 0) {
+				Block block = Blocks.blocksList[id];
+				if (block != null && isValidLandingBlock(block)) {
+					return by + 1.0;
+				}
+			}
+		}
+		return -1;
+	}
+
+	private double getLandingHeightOnLeavesAt(int bx, int bz) {
+		for (int by = MathHelper.floor(mob.y) - 1; by >= 0; by--) {
+			int id = mob.world.getBlockId(bx, by, bz);
+			if (id != 0) {
+				Block block = Blocks.blocksList[id];
+				if (block != null && block.getMaterial() == Material.leaves) {
+					return by + 1.0;
+				}
+			}
+		}
+		return -1;
+	}
+
+	private double getGroundHeight() {
+		int bx = MathHelper.floor(mob.x);
+		int bz = MathHelper.floor(mob.z);
+		int by = MathHelper.floor(mob.y);
+
+		while (by > 0) {
+			int blockId = mob.world.getBlockId(bx, by, bz);
+			if (blockId != 0 && Blocks.blocksList[blockId] != null) {
+				Block block = Blocks.blocksList[blockId];
+				if (block.isCubeShaped() || block.getMaterial() == Material.leaves) {
+					return by + 1.0;
+				}
+			}
+			by--;
+		}
+		return by + 1.0;
+	}
+
+	/** Scans downward to check if the mob is currently over an invalid surface (water or lava). */
+	private boolean isOverInvalidGround() {
+		int bx = MathHelper.floor(mob.x);
+		int bz = MathHelper.floor(mob.z);
+
+		for (int by = MathHelper.floor(mob.y) - 1; by >= Math.max(0, MathHelper.floor(mob.y) - 30); by--) {
+			int id = mob.world.getBlockId(bx, by, bz);
+			if (id != 0) {
+				Block block = Blocks.blocksList[id];
+				if (block != null) {
+					if (block.getMaterial() == Material.water || block.getMaterial() == Material.lava) {
+						return true;
+					}
+					if (block.isCubeShaped() || block.getMaterial() == Material.leaves) {
+						return false;
+					}
+				}
+			}
+		}
+		return false;
+	}
+
 	private void alertFlockToLand(ServerBlockPos3D target) {
 		IFlockable thisFlockable = (IFlockable) mob;
 
@@ -211,86 +249,38 @@ public class FlightTask<T extends MobTaskrunner & IFlyable> extends Task<T> {
 			IFlyable flyable = (IFlyable) entity;
 			IFlockable flockable = (IFlockable) entity;
 
-			// Check if this entity can flock with us
 			if (!thisFlockable.canFlockWith(entity)) continue;
 
-			// Check if they're flying and not solo and not already landing
 			if (flyable.isFlying() && !flockable.isSoloFlying() && !flyable.isLanding()) {
-				// Set their landing flag - they'll create their own target in their next tick
 				flyable.setLanding(true);
 			}
 		}
 	}
 
-	private double getGroundHeight() {
-		int bx = MathHelper.floor(mob.x);
-		int bz = MathHelper.floor(mob.z);
-		int by = MathHelper.floor(mob.y);
+	// ================= HOOKS FOR SUBCLASSES =================
 
-		while (by > 0) {
-			int blockId = mob.world.getBlockId(bx, by, bz);
-			if (blockId != 0 && Blocks.blocksList[blockId] != null) {
-				Block block = Blocks.blocksList[blockId];
-				if (block.isCubeShaped() && block.getMaterial() != Material.leaves) {
-					return by + 1.0;
-				}
-				if (block.getMaterial() == Material.leaves) return by + 1.0;
-			}
-			by--;
-		}
-		return by + 1.0;
+	/**
+	 * Whether this block is a valid surface to land on.
+	 * Default: any solid cube or leaf block that isn't water or lava.
+	 */
+	protected boolean isValidLandingBlock(Block block) {
+		if (block.getMaterial() == Material.water || block.getMaterial() == Material.lava) return false;
+		return block.isCubeShaped() || block.getMaterial() == Material.leaves;
 	}
 
-	// Fix Issue 2: Avoid landing on water - now accepts position parameters
-	private double getLandingHeightAt(int bx, int bz) {
-		for (int by = MathHelper.floor(mob.y) - 1; by >= 0; by--) {
-			int id = mob.world.getBlockId(bx, by, bz);
-			if (id != 0) {
-				Block block = Blocks.blocksList[id];
-				if (block != null) {
-					// Skip water and lava - don't land on them
-					if (block.getMaterial() == Material.water || block.getMaterial() == Material.lava) {
-						continue;
-					}
-					if (block.getMaterial() == Material.leaves) return by + 1.0;
-					if (block.isCubeShaped()) return by + 1.0;
-				}
-			}
-		}
-		return -1;
+	/**
+	 * Whether this task should prefer landing on leaves during early flight (200–400 ticks).
+	 * Default: true (standard bird behaviour).
+	 */
+	protected boolean prefersLeaves() {
+		return true;
 	}
 
-	// Fix Issue 2: Avoid landing on water - now accepts position parameters
-	private double getLandingHeightOnLeavesAt(int bx, int bz) {
-		for (int by = MathHelper.floor(mob.y) - 1; by >= 0; by--) {
-			int id = mob.world.getBlockId(bx, by, bz);
-			if (id != 0) {
-				Block block = Blocks.blocksList[id];
-				if (block != null) {
-					// Skip water and lava
-					if (block.getMaterial() == Material.water || block.getMaterial() == Material.lava) {
-						continue;
-					}
-					if (block.getMaterial() == Material.leaves) {
-						return by + 1.0;
-					}
-				}
-			}
-		}
-		return -1;
-	}
-
-	@Override
-	protected void onStop(Task interruptTask) {
-		// Clean up flight state if interrupted
-		if (interruptTask != null && !(interruptTask instanceof FlightTask)) {
-			mob.setFlying(false);
-			mob.setFlightTime(0);
-		}
-	}
-
-	@Override
-	protected boolean isEqual(Task other) {
-		return other instanceof FlightTask;
+	/**
+	 * Whether this task may delegate to {@link FlightSoloPerchTask}.
+	 * Default: true.
+	 */
+	protected boolean canUseSoloPerch() {
+		return true;
 	}
 }

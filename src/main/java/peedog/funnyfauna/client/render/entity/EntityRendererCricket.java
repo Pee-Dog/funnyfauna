@@ -1,3 +1,4 @@
+
 package peedog.funnyfauna.client.render.entity;
 
 import net.minecraft.client.render.entity.EntityRenderer;

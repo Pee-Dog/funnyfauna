@@ -16,12 +16,6 @@ import peedog.funnyfauna.item.FunnyFaunaItems;
 
 public class ProjectileBigEgg extends Projectile {
 
-	public ProjectileBigEgg(World world) {
-		super(world);
-		this.damage = 3;
-		this.setSize(0.5F, 0.5F);
-	}
-
 	public ProjectileBigEgg(World world, Mob owner) {
 		super(world, owner);
 		this.damage = 3;

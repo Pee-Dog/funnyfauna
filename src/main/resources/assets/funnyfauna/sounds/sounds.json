@@ -154,6 +154,22 @@
       "mob/bird/bluejay8.ogg"
     ]
   },
+  "mob.bird.cardinal": {
+    "subtitle": "subtitles.mob.bird.cardinal",
+    "sounds": [
+      "mob/bird/cardinal1.ogg",
+      "mob/bird/cardinal2.ogg",
+      "mob/bird/cardinal3.ogg",
+      "mob/bird/cardinal4.ogg",
+      "mob/bird/cardinal5.ogg",
+      "mob/bird/cardinal6.ogg",
+      "mob/bird/cardinal7.ogg",
+      "mob/bird/cardinal8.ogg",
+      "mob/bird/cardinal9.ogg",
+      "mob/bird/cardinal10.ogg",
+      "mob/bird/cardinal11.ogg"
+    ]
+  },
   "mob.fox.idle": {
     "subtitle": "subtitles.mob.fox.idle",
     "sounds": [
@@ -170,6 +186,27 @@
       "mob/fox/hurt1.ogg",
       "mob/fox/hurt2.ogg",
       "mob/fox/hurt3.ogg"
+    ]
+  },
+  "mob.interaction.slap": {
+    "subtitle": "subtitles.mob.interaction.slap",
+    "sounds": [
+      "mob/interaction/slap1.ogg",
+      "mob/interaction/slap2.ogg",
+      "mob/interaction/slap3.ogg"
+    ]
+  },
+  "mob.bunny.hurt": {
+    "subtitle": "subtitles.mob.bunny.hurt",
+    "sounds": [
+      "mob/bunny/hurt1.ogg",
+      "mob/bunny/hurt2.ogg"
+    ]
+  },
+  "mob.bunny.death": {
+    "subtitle": "subtitles.mob.bunny.death",
+    "sounds": [
+      "mob/bunny/death.ogg"
     ]
   }
 }

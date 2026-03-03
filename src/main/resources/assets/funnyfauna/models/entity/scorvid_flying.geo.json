@@ -1,0 +1,49 @@
+{
+	"format_version": "1.12.0",
+	"minecraft:geometry": [
+		{
+			"description": {
+				"identifier": "geometry.scorvid_flying",
+				"texture_width": 64,
+				"texture_height": 32,
+				"visible_bounds_width": 3,
+				"visible_bounds_height": 2.5,
+				"visible_bounds_offset": [0, 0.75, 0]
+			},
+			"bones": [
+				{
+					"name": "body",
+					"pivot": [-0.5, 2, -0.5],
+					"cubes": [
+						{"origin": [-3.5, 2, -3.5], "size": [7, 5, 7], "uv": [0, 0]},
+						{"origin": [-1.5, 3, -7.5], "size": [3, 2, 4], "uv": [0, 12]},
+						{"origin": [-0.5, 2, -7.5], "size": [1, 1, 0], "uv": [0, 18]},
+						{"origin": [0, 7, -3.5], "size": [0, 6, 11], "uv": [21, -11]}
+					]
+				},
+				{
+					"name": "tail",
+					"pivot": [0, 3.5, 3.5],
+					"cubes": [
+						{"origin": [-3.5, 4, 3.5], "size": [7, 0, 10], "uv": [40, 0]},
+						{"origin": [-3.5, 3, 3.5], "size": [7, 0, 10], "pivot": [0, 3, 8.5], "rotation": [0, 0, -90], "uv": [40, 10]}
+					]
+				},
+				{
+					"name": "wing_l",
+					"pivot": [3.5, 4, -0.5],
+					"cubes": [
+						{"origin": [3.5, 4, -1.5], "size": [9, 0, 10], "uv": [4, 12]}
+					]
+				},
+				{
+					"name": "wing_r",
+					"pivot": [-3.5, 4, -0.5],
+					"cubes": [
+						{"origin": [-12.5, 4, -1.5], "size": [9, 0, 10], "uv": [4, 12], "mirror": true}
+					]
+				}
+			]
+		}
+	]
+}

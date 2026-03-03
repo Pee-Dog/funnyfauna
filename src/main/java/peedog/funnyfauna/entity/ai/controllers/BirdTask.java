@@ -9,9 +9,9 @@ import peedog.funnyfauna.entity.ai.path.flight.FlightTask;
 import peedog.funnyfauna.entity.bird.MobBird;
 
 public class BirdTask extends Task<MobBird> {
-	private final SeekSeedTask<MobBird> seekSeedTask;
-	private final FlightTask<MobBird> flightTask;
-	private final IdleTask<MobBird> idleTask;
+	protected final SeekSeedTask<MobBird> seekSeedTask;
+	protected FlightTask<MobBird> flightTask;
+	protected final IdleTask<MobBird> idleTask;
 
 	public BirdTask(MobBird mob) {
 		super(mob);

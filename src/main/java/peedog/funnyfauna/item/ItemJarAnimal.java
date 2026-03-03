@@ -98,41 +98,5 @@ public class ItemJarAnimal extends ItemPlaceable {
 									double xPlaced, double yPlaced) {
 		return false;
 	}
-//		if (player.isSneaking()) return false; // handled by onUseItem
-//
-//		Block<?> block = placedBlock.get();
-//		if (block == null) return false;
-//
-//		int placeX = x + side.getOffsetX();
-//		int placeY = y + side.getOffsetY();
-//		int placeZ = z + side.getOffsetZ();
-//
-//		if (!world.isAirBlock(placeX, placeY, placeZ)) return false;
-//
-//		// Place the block
-//		world.setBlockWithNotify(placeX, placeY, placeZ, block.id());
-//
-//		// Immediately create TileEntity and assign color
-//		if (!world.isClientSide && block.getLogic() instanceof BlockLogicJarCricket) {
-//			TileEntity te = world.getTileEntity(placeX, placeY, placeZ);
-//			if (te instanceof TileEntityJarCricket) {
-//				TileEntityJarCricket jarTe = (TileEntityJarCricket) te;
-//				if (stack.getData() != null && stack.getData().containsKey("CricketColor")) {
-//					jarTe.setCricketColor(stack.getData().getInteger("CricketColor"));
-//				}
-//			}
-//		}
-//
-//		// Notify block logic that it was placed
-//		block.getLogic().onBlockPlacedByWorld(world, placeX, placeY, placeZ);
-//
-//		if (player.getGamemode().consumeBlocks()) {
-//			player.swingItem();
-//			player.getHeldItem().stackSize--;
-//		}
-//
-//		world.playSoundAtEntity(player, player, "step.stone", 1.0F, 0.5F);
-//		return true;
-//	}
 
 }

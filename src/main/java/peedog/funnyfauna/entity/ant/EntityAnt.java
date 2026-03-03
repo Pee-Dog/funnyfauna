@@ -2,15 +2,20 @@ package peedog.funnyfauna.entity.ant;
 
 import com.mojang.nbt.tags.CompoundTag;
 import net.minecraft.core.entity.Entity;
+import net.minecraft.core.entity.player.Player;
 import net.minecraft.core.item.ItemStack;
+import net.minecraft.core.item.Items;
+import net.minecraft.core.util.helper.DamageType;
 import net.minecraft.core.util.helper.MathHelper;
 import net.minecraft.core.world.World;
+import org.jetbrains.annotations.NotNull;
 import peedog.funnyfauna.entity.MobTaskrunner;
 import peedog.funnyfauna.entity.ai.path.PheromoneManager;
 import peedog.funnyfauna.entity.ai.Task;
 import peedog.funnyfauna.entity.ai.controllers.AntTask;
 import peedog.funnyfauna.entity.ai.interfaces.IHomeable;
 import peedog.funnyfauna.entity.ai.interfaces.IItemHolder;
+import peedog.funnyfauna.item.FunnyFaunaItems;
 
 public class EntityAnt extends MobTaskrunner implements IHomeable, IItemHolder {
 
@@ -28,10 +33,8 @@ public class EntityAnt extends MobTaskrunner implements IHomeable, IItemHolder {
 
 	public EntityAnt(World world) {
 		super(world);
-		this.setSize(0.25F, 0.25F);
-		this.footSize = 1F;
-		this.moveSpeed = 0.25F;
-		this.heartsHalvesLife = 10;
+		this.setSize(0.3F, 0.3F);
+		this.moveSpeed = 0.15F;
 	}
 
 	@Override
@@ -94,6 +97,25 @@ public class EntityAnt extends MobTaskrunner implements IHomeable, IItemHolder {
 			this.xd *= 0.8;
 			this.zd *= 0.8;
 		}
+	}
+
+	@Override
+	public boolean isInWall() {
+		return false;
+	}
+
+	@Override
+	public void move(double xd, double yd, double zd) {
+		this.stuckInCobweb = false;
+		super.move(xd, yd, zd);
+	}
+
+	@Override
+	public void causeFallDamage(float distance) {
+	}
+
+	@Override
+	protected void jump() {
 	}
 
 	// --- IHomeable ---
@@ -178,14 +200,46 @@ public class EntityAnt extends MobTaskrunner implements IHomeable, IItemHolder {
 		}
 	}
 
-	// --- Standard Properties ---
+	@Override
+	public boolean interact(@NotNull Player player) {
+		ItemStack held = player.inventory.getCurrentItem();
+		if (held != null && held.itemID == Items.JAR.id) {
+			if (!player.world.isClientSide) {
+				int slot = player.inventory.getCurrentItemIndex();
+				player.inventory.removeItem(slot, 1);
 
-	@Override public int getMaxHealth() { return 8; }
-	@Override public boolean collidesWith(Entity entity) { return false; }
+				ItemStack antJar = new ItemStack(FunnyFaunaItems.JAR_ANT);
+				player.inventory.insertItem(antJar, true);
+				if (antJar.stackSize > 0) player.dropPlayerItemWithRandomChoice(antJar, false);
+
+				remove();
+			}
+			return true;
+		}
+		return false;
+	}
 
 	@Override
-	public void spawnInit() {
-		System.out.println("Ant spawned at " + (int)this.x + "," + (int)this.y + "," + (int)this.z);
+	public boolean hurt(Entity attacker, int damage, DamageType type) {
+		if (!world.isClientSide) remove();
+		if (type == DamageType.COMBAT) {
+			world.playSoundAtEntity(null, this, "funnyfauna:mob.interaction.slap", 0.6F, 0.8F + random.nextFloat() * 0.2F);
+		}
+		if (onGround) world.spawnParticle("bug_squash", x, y + 0.01, z, 0.0, 0.2, 0.0, 0);
+		return true;
+	}
+	// --- Standard Properties ---
+
+
+	@Override
+	public boolean collidesWith(Entity entity) {
+		return false;
+	}
+
+
+	@Override
+	protected boolean canDespawn() {
+		return !this.hasHome && super.canDespawn();
 	}
 
 	public int getAnimFrame() {
@@ -199,6 +253,8 @@ public class EntityAnt extends MobTaskrunner implements IHomeable, IItemHolder {
 	}
 
 	@Override public String getLivingSound() { return null; }
-	@Override public String getHurtSound()   { return "random.hurt"; }
-	@Override public String getDeathSound()  { return "random.hurt"; }
+	@Override public String getHurtSound()   { return null; }
+	@Override public String getDeathSound()  { return null; }
+	@Override
+	protected boolean makeStepSound() { return false; }
 }

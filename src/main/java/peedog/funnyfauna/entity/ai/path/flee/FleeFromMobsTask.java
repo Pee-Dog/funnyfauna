@@ -2,10 +2,12 @@ package peedog.funnyfauna.entity.ai.path.flee;
 
 import net.minecraft.core.entity.Entity;
 import net.minecraft.core.entity.Mob;
+import net.minecraft.core.entity.player.Player;
 import net.minecraft.core.util.helper.MathHelper;
 import peedog.funnyfauna.entity.MobTaskrunner;
 import peedog.funnyfauna.entity.ai.Task;
 import peedog.funnyfauna.entity.ai.path.PathTask;
+import peedog.funnyfauna.entity.lizard.MobLizard;
 
 import java.util.List;
 import java.util.function.Supplier;
@@ -17,7 +19,7 @@ public class FleeFromMobsTask<T extends MobTaskrunner> extends PathTask<T> {
 	public FleeFromMobsTask(T mob, Supplier<Boolean> shouldFlee) {
 		super(mob);
 		this.shouldFlee = shouldFlee;
-		this.moveSpeed = 2.5F;
+		this.moveSpeed = 1.5F; // 5.0F is too fast and often breaks pathfinding
 	}
 
 	@Override
@@ -25,24 +27,29 @@ public class FleeFromMobsTask<T extends MobTaskrunner> extends PathTask<T> {
 		this.path = null;
 	}
 
-	@Override
-	public Task onTick() {
-		// Only active if should flee
-		if (!shouldFlee.get()) {
-			return null;
-		}
-
-		// Find nearest threat
+	/**
+	 * Helper to find the nearest threat.
+	 */
+	public Entity findThreat() {
 		Entity threat = null;
 		double closest = Double.MAX_VALUE;
 
+		// Increased range to 12.0 so players don't instantly reach the lizard
 		List<Entity> nearby = mob.world.getEntitiesWithinAABBExcludingEntity(
-			mob, mob.bb.expand(6.0, 4.0, 6.0)
+			mob, mob.bb.expand(12.0, 4.0, 12.0)
 		);
 
 		for (Entity e : nearby) {
-			if ((e instanceof Mob && e.getClass() != mob.getClass())
-				|| e instanceof net.minecraft.core.entity.player.Player) {
+			// Check for Mobs or Players
+			if ((e instanceof Mob && e.getClass() != mob.getClass()) || e instanceof Player) {
+
+				// Don't flee from the owner if tamed
+				if (mob instanceof MobLizard && e instanceof Player) {
+					MobLizard lizard = (MobLizard) mob;
+					if (lizard.isTamed() && ((Player) e).uuid.toString().equals(lizard.getOwnerUUID())) {
+						continue;
+					}
+				}
 
 				double d = mob.distanceTo(e);
 				if (d < closest) {
@@ -51,29 +58,41 @@ public class FleeFromMobsTask<T extends MobTaskrunner> extends PathTask<T> {
 				}
 			}
 		}
+		return threat;
+	}
 
-		// No threat → stop fleeing
-		if (threat == null) {
+	@Override
+	public Task onTick() {
+		if (!shouldFlee.get()) {
 			return null;
 		}
 
-		// Move away from threat
+		Entity threat = findThreat();
+
+		if (threat == null) {
+			this.path = null;
+			return null;
+		}
+
+		// Calculate escape vector
 		double dx = mob.x - threat.x;
 		double dz = mob.z - threat.z;
 		double dist = Math.sqrt(dx * dx + dz * dz);
 
-		if (dist > 0 && (this.path == null || mob.world.rand.nextInt(5) == 0)) {
-			int tx = MathHelper.floor(mob.x + (dx / dist) * 6.0);
-			int tz = MathHelper.floor(mob.z + (dz / dist) * 6.0);
+		// Update path away from threat
+		if (dist > 0 && (this.path == null || mob.world.rand.nextInt(10) == 0)) {
+			int tx = MathHelper.floor(mob.x + (dx / dist) * 8.0);
+			int tz = MathHelper.floor(mob.z + (dz / dist) * 8.0);
 			this.path = mob.world.getEntityPathToXYZ(mob, tx, (int) mob.y, tz, 16.0F);
 		}
 
 		if (this.path != null) {
 			mob.setMoveForward(this.moveSpeed);
+			super.onTick(); // Move along the path
 		}
 
-		super.onTick();
-		return null; // stay in flee task
+		// MUST return null to avoid StackOverflowError in recursive AI engines
+		return null;
 	}
 
 	@Override
