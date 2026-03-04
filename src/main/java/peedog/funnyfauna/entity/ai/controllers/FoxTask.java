@@ -1,7 +1,7 @@
 package peedog.funnyfauna.entity.ai.controllers;
 
 import peedog.funnyfauna.entity.ai.path.follow.FollowLeaderTask;
-import peedog.funnyfauna.entity.ai.path.FoxDistractionTask;
+import peedog.funnyfauna.entity.ai.path.follow.FoxDistractionTask;
 import peedog.funnyfauna.entity.ai.Task;
 import peedog.funnyfauna.entity.ai.compound.IdleTask;
 import peedog.funnyfauna.entity.fox.MobFox;

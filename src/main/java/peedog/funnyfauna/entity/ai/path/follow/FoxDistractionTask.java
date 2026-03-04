@@ -1,4 +1,4 @@
-package peedog.funnyfauna.entity.ai.path;
+package peedog.funnyfauna.entity.ai.path.follow;
 
 import net.minecraft.core.entity.Entity;
 import peedog.funnyfauna.entity.ai.Task;

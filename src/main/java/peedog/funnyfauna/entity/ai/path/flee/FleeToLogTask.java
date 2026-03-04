@@ -12,26 +12,27 @@ public class FleeToLogTask extends PathTask<MobChipmunk> {
 	private int pathRecalcTimer = 0;
 
 	/**
-	 * Set to false if the last log search came up empty.
-	 * ChipmunkTask reads this to decide whether to fall back to FleeFromDangerTask.
-	 * Defaults to true so the task is given at least one chance to search before
-	 * the fallback triggers.
+	 * BUG FIX (Issue 2): Was `true` as field default AND reset to `true` in
+	 * onStart(). This meant ChipmunkTask always jumped into FleeToLogTask (slow,
+	 * 0.5 speed) on the very first flee tick, instead of the fast FleeFromDangerTask.
+	 * The chipmunk appeared to "leisurely stroll" because it was using the wrong task.
+	 *
+	 * Now defaults false. ChipmunkTask runs FleeFromDangerTask immediately,
+	 * while logSearchTimer scans in the background. Once a log is found, this
+	 * switches to true and ChipmunkTask redirects to FleeToLogTask.
 	 */
-	public boolean foundLog = true;
+	public boolean foundLog = false;
 
 	public FleeToLogTask(MobChipmunk mob) {
 		super(mob);
-		this.moveSpeed = 0.5F;
-		// Jump over terrain obstacles encountered while pathfinding to the log.
-		// Without this the chipmunk plants its face into any 1-block bump along
-		// the way and never reaches the tree.
+		this.moveSpeed = 1.5F;
 		this.shouldJumpOnCollision = true;
 	}
 
 	@Override
 	protected void onStart() {
 		hasTarget = false;
-		foundLog = true;
+		foundLog = false; // was `true` — see field comment above
 		pathRecalcTimer = 0;
 	}
 
@@ -43,15 +44,35 @@ public class FleeToLogTask extends PathTask<MobChipmunk> {
 			return null;
 		}
 
-		// Search for a log target if we don't have one yet.
-		// Only re-search on a timer or when the path is explicitly finished — NOT
-		// just because path is null.  When the pathfinder returns null (mob already
-		// adjacent to the log, no navigable path to a solid block), we must fall
-		// through to the distSq manual-push below instead of recalculating every
-		// tick in an infinite loop that never reaches the close-range steering.
+		if (hasTarget) {
+			double dx = (targetX + 0.5) - mob.x;
+			double dz = (targetZ + 0.5) - mob.z;
+			double distSq = dx * dx + dz * dz;
+
+			// Manual push phase: take over from A* when close to the log.
+			// Threshold is 2 blocks (distSq < 4.0). We also clear this.path so
+			// the isDone() check in the recalc condition can never fire while pushing,
+			// which was the cause of the "freeze" — searchForLog() was being called
+			// every tick once the A* path completed, continuously re-issuing a path
+			// to a solid block and fighting the manual steering.
+			if (distSq < 4.0 || mob.isClimbing()) {
+				this.path = null; // stop A* recalc timer from interfering
+				float yaw = (float)(Math.atan2(dz, dx) * 180.0 / Math.PI) - 90.0F;
+				mob.yRot = yaw;
+				mob.setMoveForward(this.moveSpeed);
+				if (mob.horizontalCollision && mob.onGround && !mob.isClimbing()) {
+					mob.yd = 0.4F;
+				}
+				return null;
+			}
+		}
+
+		// Search for a log if we don't have one, or refresh every 40 ticks.
+		// NOT conditioned on path.isDone() — that fired every tick when the
+		// pathfinder returned immediately-done paths to solid log blocks.
 		if (!hasTarget) {
 			searchForLog();
-		} else if (pathRecalcTimer-- <= 0 || (this.path != null && this.path.isDone())) {
+		} else if (pathRecalcTimer-- <= 0) {
 			pathRecalcTimer = 40;
 			searchForLog();
 		}
@@ -60,40 +81,9 @@ public class FleeToLogTask extends PathTask<MobChipmunk> {
 			return null;
 		}
 
-		if (hasTarget) {
-			double dx = (targetX + 0.5) - mob.x;
-			double dz = (targetZ + 0.5) - mob.z;
-			double distSq = dx * dx + dz * dz;
-
-			// Switch to manual push at 1.5 blocks (distSq < 2.25).
-			// The old threshold of 2.0 blocks was too generous and caused the mob
-			// to start "climbing" while still too far from the log face to actually
-			// trigger horizontalCollision. At 1.5 blocks the mob is close enough
-			// that the push will bring it flush against the face within 1-2 ticks.
-			if (distSq < 2.25 || mob.isClimbing()) {
-				float yaw = (float)(Math.atan2(dz, dx) * 180.0 / Math.PI) - 90.0F;
-				mob.yRot = yaw;
-				mob.setMoveForward(this.moveSpeed);
-				// Jump if there is a non-log obstacle directly ahead while in the
-				// close-range push phase. The isClimbing() branch never needs this
-				// (climbing is already working), but when just pressing toward the log
-				// face any 1-block bump will otherwise stall the approach completely.
-				if (mob.horizontalCollision && mob.onGround && !mob.isClimbing()) {
-					mob.yd = 0.4F;
-				}
-				return null;
-			}
-		}
-
 		return super.onTick();
 	}
 
-	/**
-	 * Scans nearby blocks for the closest log and paths toward it.
-	 * Public so ChipmunkTask can call this periodically even while
-	 * FleeFromDangerTask is running, allowing a timely switch back to
-	 * this task once a log comes within range.
-	 */
 	public void searchForLog() {
 		int r = 16;
 		double bestDist = Double.MAX_VALUE;
