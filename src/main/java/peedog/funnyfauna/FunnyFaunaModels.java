@@ -38,8 +38,10 @@ import peedog.funnyfauna.entity.lizard.MobLizard;
 import peedog.funnyfauna.entity.moth.MobMoth;
 import peedog.funnyfauna.entity.mouse.MobMouse;
 import peedog.funnyfauna.entity.penguin.MobPenguin;
+import peedog.funnyfauna.entity.pigeon.MobPigeon;
 import peedog.funnyfauna.entity.projectile.ProjectileBigEgg;
 import peedog.funnyfauna.entity.projectile.ProjectileGlowstick;
+import peedog.funnyfauna.entity.sasquatch.MobSasquatch;
 import peedog.funnyfauna.entity.scorvid.MobScorvid;
 import peedog.funnyfauna.entity.tumbleweed.EntityTumbleweed;
 import peedog.funnyfauna.entity.worm.EntityWorm;
@@ -146,6 +148,8 @@ public class FunnyFaunaModels implements ModelEntrypoint {
 		ModelHelper.setEntityModel(MobChipmunk.class, MobRendererChipmunk::new);
 		ModelHelper.setEntityModel(MobDuck.class, MobRendererDuck::new);
 		ModelHelper.setEntityModel(MobScorvid.class, MobRendererScorvid::new);
+		ModelHelper.setEntityModel(MobPigeon.class, MobRendererPigeon::new);
+		ModelHelper.setEntityModel(MobSasquatch.class, MobRendererSasquatch::new);
 
 
 	}
