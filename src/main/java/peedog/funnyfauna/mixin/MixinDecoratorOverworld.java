@@ -12,6 +12,7 @@ import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 import peedog.funnyfauna.block.FunnyFaunaBlocks;
 import peedog.funnyfauna.world.features.WorldFeatureAntHill;
+import peedog.funnyfauna.world.features.WorldFeatureBearCave;
 
 import java.util.Random;
 
@@ -48,6 +49,26 @@ public abstract class MixinDecoratorOverworld {
 
 			// Call the feature [cite: 2]
 			new WorldFeatureAntHill(FunnyFaunaBlocks.ANT_HILL.id()).place(this.world, rand, xPos, yPos, zPos);
+		}
+	}
+	@Inject(method = "decorate", at = @At("TAIL"))
+	private void injectBearCaves(Chunk chunk, CallbackInfo ci) {
+		int chunkX = chunk.xPosition;
+		int chunkZ = chunk.zPosition;
+		int x = chunkX * 16;
+		int z = chunkZ * 16;
+
+		Random rand = new Random(this.world.getRandomSeed());
+		long l1 = rand.nextLong() / 2L * 2L + 1L;
+		long l2 = rand.nextLong() / 2L * 2L + 1L;
+		rand.setSeed((long)chunkX * l1 + (long)chunkZ * l2 ^ this.world.getRandomSeed());
+
+		// DEBUG: 1 in 2 chance — change to something like 64 for production
+		if (rand.nextInt(2) == 0) {
+			int xPos = x + rand.nextInt(16) + 8;
+			int zPos = z + rand.nextInt(16) + 8;
+			int yPos = this.world.getHeightValue(xPos, zPos);
+			new WorldFeatureBearCave().place(this.world, rand, xPos, yPos, zPos);
 		}
 	}
 }

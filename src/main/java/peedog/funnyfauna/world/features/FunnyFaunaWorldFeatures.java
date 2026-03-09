@@ -15,6 +15,7 @@ public class FunnyFaunaWorldFeatures {
 	private static void initializeWorldFeatures() {
 		// Registers your Ant Hill so the game knows it exists
 		CommandHelper.registerWorldFeatureClass(WorldFeatureAntHill.class, "AntHill");
+		CommandHelper.registerWorldFeatureClass(WorldFeatureBearCave.class, "BearCave");
 
 	}
 }

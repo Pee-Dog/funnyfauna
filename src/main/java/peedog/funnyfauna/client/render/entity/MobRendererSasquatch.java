@@ -68,7 +68,24 @@ public class MobRendererSasquatch extends MobRenderer<MobSasquatch> {
 		entity.bbWidth  = Math.max(entity.bbWidth,  0.5F);
 		entity.bbHeight = Math.max(entity.bbHeight, 0.5F);
 
+		float alpha = entity.alpha;
+		boolean needsBlend = alpha < 1.0F;
+
+		if (needsBlend) {
+			GL11.glEnable(GL11.GL_BLEND);
+			GL11.glBlendFunc(GL11.GL_SRC_ALPHA, GL11.GL_ONE_MINUS_SRC_ALPHA);
+			GL11.glDepthMask(false);
+			GL11.glColor4f(1.0F, 1.0F, 1.0F, alpha);
+		}
+
 		super.render(tessellator, entity, 0, 0, 0, yaw, partialTick);
+
+		if (needsBlend) {
+			GL11.glDepthMask(true);
+			GL11.glDisable(GL11.GL_BLEND);
+			GL11.glColor4f(1.0F, 1.0F, 1.0F, 1.0F); // restore full opacity for other renders
+		}
+
 		GL11.glPopMatrix();
 	}
 

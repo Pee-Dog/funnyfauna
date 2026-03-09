@@ -16,6 +16,9 @@ public class MobSasquatch extends MobTaskrunner implements IFleeable {
 	public static final double SAFE_DISTANCE    = 70.0;
 	public static final double DESPAWN_DISTANCE = 50.0;
 
+	/** 1.0 = fully opaque, 0.0 = fully invisible. Lerped each tick. */
+	public float alpha = 1.0F;
+
 	private Entity fleeTarget  = null;
 	private int    fleeTimer   = 0;
 	private int    scanCounter = 0;
@@ -68,13 +71,25 @@ public class MobSasquatch extends MobTaskrunner implements IFleeable {
 			if (nearest != null) {
 				double dist = this.distanceTo(nearest);
 
-				if (dist < DESPAWN_DISTANCE) {
+				if (dist < SAFE_DISTANCE) {
+					this.setFleeTarget(nearest);
+					this.setFleeTimer(80);
+				}
+
+				// Fade out linearly between SAFE_DISTANCE and DESPAWN_DISTANCE.
+				// Below DESPAWN_DISTANCE alpha clamps to 0 and the mob despawns.
+				float targetAlpha = (float) ((dist - DESPAWN_DISTANCE) / (SAFE_DISTANCE - DESPAWN_DISTANCE));
+				targetAlpha = Math.max(0.0F, Math.min(1.0F, targetAlpha));
+				// Lerp toward target so the fade is smooth across scan gaps
+				this.alpha += (targetAlpha - this.alpha) * 0.3F;
+
+				if (this.alpha <= 0.01F) {
 					this.remove();
 					return;
 				}
-
-				this.setFleeTarget(nearest);
-				this.setFleeTimer(80);
+			} else {
+				// No player nearby — fade back to fully opaque
+				this.alpha += (1.0F - this.alpha) * 0.3F;
 			}
 		}
 	}
