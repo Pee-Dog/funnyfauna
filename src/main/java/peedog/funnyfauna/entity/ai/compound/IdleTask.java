@@ -6,7 +6,6 @@ import peedog.funnyfauna.entity.ai.LookAroundTask;
 import peedog.funnyfauna.entity.ai.LookAtPlayersTask;
 import peedog.funnyfauna.entity.ai.Task;
 import peedog.funnyfauna.entity.ai.path.SurfaceSwimTask;
-import peedog.funnyfauna.entity.ai.path.WanderHopTask;
 import peedog.funnyfauna.entity.ai.path.WanderTask;
 
 public class IdleTask<T extends MobTaskrunner> extends Task<T> {
@@ -14,11 +13,7 @@ public class IdleTask<T extends MobTaskrunner> extends Task<T> {
 	public boolean shouldWander = true;
 	public boolean shouldSwim = true;
 	public boolean shouldSurfaceSwim = false;
-	public boolean shouldHop = false;
-
 	public final WanderTask<T> wanderTask;
-	// New Task Instance
-	public final WanderHopTask<T> wanderHopTask;
 	public final LookAtPlayersTask<T> lookAtPlayersTask;
 	public final LookAroundTask<T> lookAroundTask;
 	public final SurfaceSwimTask<T> surfaceSwimTask;
@@ -30,14 +25,6 @@ public class IdleTask<T extends MobTaskrunner> extends Task<T> {
 
 		// Standard walking wander
 		this.wanderTask = new WanderTask<T>(mob) {
-			@Override
-			public Entity lookTarget() {
-				return self.lookAtPlayersTask.currentTarget;
-			}
-		};
-
-		// New hopping wander
-		this.wanderHopTask = new WanderHopTask<T>(mob) {
 			@Override
 			public Entity lookTarget() {
 				return self.lookAtPlayersTask.currentTarget;
@@ -73,15 +60,14 @@ public class IdleTask<T extends MobTaskrunner> extends Task<T> {
 		}
 
 		// Determine which wander task to check
-		WanderTask<T> activeWander = shouldHop ? wanderHopTask : wanderTask;
 
 		if (
 			this.shouldWander && (
-				activeWander.path != null ||
-					!this.isLooking() && this.random.nextInt(shouldHop ? 40 : 80) == 0 // Hop more often than walk
+				wanderTask.path != null ||
+					!this.isLooking() && this.random.nextInt(20) == 0
 			)
 		) {
-			return activeWander;
+			return wanderTask;
 		}
 		else if (
 			this.lookAtPlayersTask.currentTarget != null ||

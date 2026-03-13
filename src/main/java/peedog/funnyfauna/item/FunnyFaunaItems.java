@@ -40,6 +40,7 @@ public class FunnyFaunaItems {
 	public static Item JAR_MOTH;
 	public static Item GLOWSTICK;
 	public static Item DUST_CHITIN;
+	public static Item FUZZ;
 
 
 
@@ -115,14 +116,14 @@ public class FunnyFaunaItems {
 			.build(new ItemTumbleweed("tumbleweed", "funnyfauna:item/tumbleweed", itemID++));
 		BIOME_COMPASS = new ItemBuilder(MOD_ID)
 			.build(new ItemBiomeCompass("biome.compass", "funnyfauna:item/biome_compass", itemID++));
-
-// Toggleable items
 		ARM_EXTENSION = new ItemBuilder(MOD_ID)
 			.build(new ItemArmExtension("arm_extension", "funnyfauna:item/arm_extension", itemID++));
 		STURDY_SHELL = new ItemBuilder(MOD_ID)
 			.build(new ItemSturdyShell("sturdy.shell", "funnyfauna:item/sturdy_shell", itemID++));
 		CLIMBING_CLAWS = new ItemBuilder(MOD_ID)
 			.build(new ItemClimbingClaws("climbing.claws", "funnyfauna:item/climbing_claws", itemID++));
+		FUZZ = new ItemBuilder(MOD_ID)
+			.build(new Item("fuzz", "funnyfauna:item/fuzz", itemID++));
 
 	}
 }

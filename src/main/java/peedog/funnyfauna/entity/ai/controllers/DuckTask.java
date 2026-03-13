@@ -20,7 +20,6 @@ public class DuckTask extends Task<MobDuck> {
 		// Ducks walk and surface swim
 		this.idleTask.shouldSwim = false;
 		this.idleTask.shouldSurfaceSwim = true;
-		this.idleTask.shouldHop = false;
 	}
 
 	@Override

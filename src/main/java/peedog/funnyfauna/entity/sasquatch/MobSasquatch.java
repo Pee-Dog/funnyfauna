@@ -17,7 +17,7 @@ public class MobSasquatch extends MobTaskrunner implements IFleeable {
 	public static final double DESPAWN_DISTANCE = 50.0;
 
 	/** 1.0 = fully opaque, 0.0 = fully invisible. Lerped each tick. */
-	public float alpha = 1.0F;
+	public float alpha = 1.0F;                                                                                                                
 
 	private Entity fleeTarget  = null;
 	private int    fleeTimer   = 0;

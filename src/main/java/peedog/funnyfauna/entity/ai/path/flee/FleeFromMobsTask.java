@@ -50,7 +50,6 @@ public class FleeFromMobsTask<T extends MobTaskrunner> extends PathTask<T> {
 						continue;
 					}
 				}
-
 				double d = mob.distanceTo(e);
 				if (d < closest) {
 					closest = d;

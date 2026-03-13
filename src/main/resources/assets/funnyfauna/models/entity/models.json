@@ -14,7 +14,8 @@
     "/assets/funnyfauna/models/entity/scorvid.geo.json",
     "/assets/funnyfauna/models/entity/scorvid_flying.geo.json",
     "/assets/funnyfauna/models/entity/sasquatch.geo.json",
-    "/assets/funnyfauna/models/entity/bear.geo.json"
+    "/assets/funnyfauna/models/entity/bear.geo.json",
+    "/assets/funnyfauna/models/entity/bear_skinny.geo.json"
   ],
   "renderers": {
     "funnyfauna:horse": {
@@ -58,7 +59,8 @@
       "main": "geometry.sasquatch"
     },
     "funnyfauna:bear": {
-      "main": "geometry.bear"
+      "main": "geometry.bear",
+      "skinny": "geometry.bear_skinny"
     }
   }
 }

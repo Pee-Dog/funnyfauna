@@ -18,6 +18,7 @@ import peedog.funnyfauna.block.FunnyFaunaBlocks;
 import peedog.funnyfauna.block.entity.TileEntityEmuEgg;
 import peedog.funnyfauna.client.render.entity.*;
 import peedog.funnyfauna.client.render.item.ItemModelGlowstick;
+import peedog.funnyfauna.client.render.model.BlockModelFurPainted;
 import peedog.funnyfauna.client.render.model.BlockModelGlowstick;
 import peedog.funnyfauna.client.render.tileentity.TileRendererEmuEgg;
 import peedog.funnyfauna.entity.ant.EntityAnt;
@@ -59,6 +60,8 @@ public class FunnyFaunaModels implements ModelEntrypoint {
 		ModelHelper.setBlockModel(FunnyFaunaBlocks.JAR_CRICKET, () -> new BlockModelJarClosed(FunnyFaunaBlocks.JAR_CRICKET));
 		ModelHelper.setBlockModel(FunnyFaunaBlocks.HAYBALE, () -> new BlockModelAxisAligned(FunnyFaunaBlocks.HAYBALE).setTex(0, "funnyfauna:block/haybale_top", new Side[]{Side.TOP, Side.BOTTOM}).setTex(0, "funnyfauna:block/haybale_side", new Side[]{Side.NORTH, Side.EAST, Side.SOUTH, Side.WEST}));
 		ModelHelper.setBlockModel(FunnyFaunaBlocks.GLOWSTICK, () -> new BlockModelGlowstick<>(FunnyFaunaBlocks.GLOWSTICK));
+		ModelHelper.setBlockModel(FunnyFaunaBlocks.FUR, () -> new BlockModelStandard(FunnyFaunaBlocks.FUR).setAllTextures(0, "funnyfauna:block/fur/fur"));
+		ModelHelper.setBlockModel(FunnyFaunaBlocks.FUR_PAINTED, () -> new BlockModelFurPainted<>(FunnyFaunaBlocks.FUR_PAINTED));
 	}
 
 	@Override
@@ -122,6 +125,7 @@ public class FunnyFaunaModels implements ModelEntrypoint {
 				return ItemToggleable.isToggled(stack) ? ON : OFF;
 			}
 		});
+		dispatcher.addDispatch(new ItemModelStandard(FunnyFaunaItems.FUZZ, null).setIcon("funnyfauna:item/fuzz"));
 
 	}
 

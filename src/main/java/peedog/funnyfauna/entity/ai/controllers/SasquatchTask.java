@@ -17,7 +17,6 @@ public class SasquatchTask extends Task<MobSasquatch> {
 		this.idleTask  = new IdleTask<>(mob);
 		this.idleTask.shouldWander      = true;
 		this.idleTask.shouldSwim        = true;
-		this.idleTask.shouldHop         = false;
 		this.idleTask.shouldSurfaceSwim = false;
 	}
 
