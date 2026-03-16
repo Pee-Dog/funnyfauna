@@ -208,5 +208,12 @@
     "sounds": [
       "mob/bunny/death.ogg"
     ]
+  },
+  "step.scales": {
+    "subtitle": "subtitles.step.scales",
+    "sounds": [
+      "block/scales/step1.ogg",
+      "block/scales/step2.ogg"
+    ]
   }
 }

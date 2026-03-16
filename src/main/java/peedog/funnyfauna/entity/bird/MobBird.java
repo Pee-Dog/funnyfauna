@@ -33,7 +33,7 @@ public class MobBird extends MobFlying implements IFlockable {
 	// Fed state
 	public boolean isFed = false;
 
-	// Hopping
+	// HoppingF
 	private int hopCooldown = 0;
 	private ServerBlockPos3D leapTarget = null;
 

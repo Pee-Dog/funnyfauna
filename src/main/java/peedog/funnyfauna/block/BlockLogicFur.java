@@ -14,6 +14,6 @@ public class BlockLogicFur extends BlockLogic implements IPaintable {
 
 	public void setColor(World world, int x, int y, int z, DyeColor color) {
 		world.setBlock(x, y, z, FunnyFaunaBlocks.FUR_PAINTED.id());
-		((BlockLogicFur)FunnyFaunaBlocks.FUR_PAINTED.getLogic()).setColor(world, x, y, z, color);
+		((BlockLogicFurPainted)FunnyFaunaBlocks.FUR_PAINTED.getLogic()).setColor(world, x, y, z, color);
 	}
 }

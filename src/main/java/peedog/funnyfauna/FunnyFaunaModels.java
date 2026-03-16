@@ -18,8 +18,7 @@ import peedog.funnyfauna.block.FunnyFaunaBlocks;
 import peedog.funnyfauna.block.entity.TileEntityEmuEgg;
 import peedog.funnyfauna.client.render.entity.*;
 import peedog.funnyfauna.client.render.item.ItemModelGlowstick;
-import peedog.funnyfauna.client.render.model.BlockModelFurPainted;
-import peedog.funnyfauna.client.render.model.BlockModelGlowstick;
+import peedog.funnyfauna.client.render.model.*;
 import peedog.funnyfauna.client.render.tileentity.TileRendererEmuEgg;
 import peedog.funnyfauna.entity.ant.EntityAnt;
 import peedog.funnyfauna.entity.armadillo.MobArmadillo;
@@ -62,6 +61,12 @@ public class FunnyFaunaModels implements ModelEntrypoint {
 		ModelHelper.setBlockModel(FunnyFaunaBlocks.GLOWSTICK, () -> new BlockModelGlowstick<>(FunnyFaunaBlocks.GLOWSTICK));
 		ModelHelper.setBlockModel(FunnyFaunaBlocks.FUR, () -> new BlockModelStandard(FunnyFaunaBlocks.FUR).setAllTextures(0, "funnyfauna:block/fur/fur"));
 		ModelHelper.setBlockModel(FunnyFaunaBlocks.FUR_PAINTED, () -> new BlockModelFurPainted<>(FunnyFaunaBlocks.FUR_PAINTED));
+		ModelHelper.setBlockModel(FunnyFaunaBlocks.BLOCK_SCALES, () -> new BlockModelStandard(FunnyFaunaBlocks.BLOCK_SCALES).setAllTextures(0, "funnyfauna:block/scales/scales"));
+		ModelHelper.setBlockModel(FunnyFaunaBlocks.BLOCK_SCALES_PAINTED, () -> new BlockModelScalesPainted<>(FunnyFaunaBlocks.BLOCK_SCALES_PAINTED));
+		ModelHelper.setBlockModel(FunnyFaunaBlocks.SLAB_SCALES, () -> new BlockModelSlab(FunnyFaunaBlocks.SLAB_SCALES));
+		ModelHelper.setBlockModel(FunnyFaunaBlocks.SLAB_SCALES_PAINTED, () -> new BlockModelScalesSlabPainted(FunnyFaunaBlocks.SLAB_SCALES_PAINTED));
+		ModelHelper.setBlockModel(FunnyFaunaBlocks.STAIRS_SCALES, () -> new BlockModelStairs(FunnyFaunaBlocks.STAIRS_SCALES));
+		ModelHelper.setBlockModel(FunnyFaunaBlocks.STAIRS_SCALES_PAINTED, () -> new BlockModelScalesStairsPainted(FunnyFaunaBlocks.STAIRS_SCALES_PAINTED));
 	}
 
 	@Override

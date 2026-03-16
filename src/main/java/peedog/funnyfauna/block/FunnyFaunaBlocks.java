@@ -1,15 +1,16 @@
 package peedog.funnyfauna.block;
 
-import net.minecraft.core.block.Block;
-import net.minecraft.core.block.BlockLogic;
-import net.minecraft.core.block.BlockLogicAxisAligned;
+import net.minecraft.core.block.*;
 import net.minecraft.core.block.material.Material;
 import net.minecraft.core.block.tag.BlockTags;
 import net.minecraft.core.data.tag.Tag;
 import net.minecraft.core.item.Items;
 import net.minecraft.core.item.block.ItemBlockPainted;
+import net.minecraft.core.item.block.ItemBlockSlabPainted;
+import net.minecraft.core.item.block.ItemBlockStairsPainted;
 import net.minecraft.core.sound.BlockSounds;
 import peedog.funnyfauna.item.FunnyFaunaItems;
+import peedog.funnyfauna.sound.FunnyBlockSounds;
 import turniplabs.halplibe.helper.BlockBuilder;
 import turniplabs.halplibe.util.BlockInitEntrypoint;
 
@@ -27,6 +28,12 @@ public final class FunnyFaunaBlocks implements BlockInitEntrypoint {
 	public static Block<?> GLOWSTICK;
 	public static Block<?> FUR;
 	public static Block<?> FUR_PAINTED;
+	public static Block<?> BLOCK_SCALES;
+	public static Block<?> BLOCK_SCALES_PAINTED;
+	public static Block<?> SLAB_SCALES;
+	public static Block<?> SLAB_SCALES_PAINTED;
+	public static Block<?> STAIRS_SCALES;
+	public static Block<?> STAIRS_SCALES_PAINTED;
 
 	public static void init() {
 		if (!hasInit) {
@@ -86,6 +93,52 @@ public final class FunnyFaunaBlocks implements BlockInitEntrypoint {
 			.build("fur.painted", "fur_painted", blockID++, BlockLogicFurPainted::new)
 			.withDisabledNeighborNotifyOnMetadataChange()
 			.setBlockItem(b -> new ItemBlockPainted(b, false));
+		BLOCK_SCALES = new BlockBuilder(MOD_ID)
+			.setBlockSound(FunnyBlockSounds.SCALES).setHardness(1.0f)
+			.addTags(new Tag[]{BlockTags.MINEABLE_BY_PICKAXE, BlockTags.MINEABLE_BY_AXE, BlockTags.MINEABLE_BY_HOE})
+			.build("block.scales", "block_scales", blockID++,
+				b -> new BlockLogicFunnyPaintable(b, Material.stone, () -> BLOCK_SCALES_PAINTED))
+			.withDisabledNeighborNotifyOnMetadataChange();
+
+		BLOCK_SCALES_PAINTED = new BlockBuilder(MOD_ID)
+			.setBlockSound(FunnyBlockSounds.SCALES).setHardness(1.0f)
+			.addTags(new Tag[]{BlockTags.MINEABLE_BY_PICKAXE, BlockTags.MINEABLE_BY_AXE, BlockTags.MINEABLE_BY_HOE})
+			.build("block.scales.painted", "block_scales_painted", blockID++,
+				b -> new BlockLogicFunnyPainted(b, Material.stone, () -> BLOCK_SCALES))
+			.withDisabledNeighborNotifyOnMetadataChange()
+			.setBlockItem(b -> new ItemBlockPainted(b, false));
+
+		SLAB_SCALES = new BlockBuilder(MOD_ID)
+			.setBlockSound(FunnyBlockSounds.SCALES).setUseInternalLight()
+			.addTags(new Tag[]{BlockTags.MINEABLE_BY_PICKAXE, BlockTags.MINEABLE_BY_AXE, BlockTags.MINEABLE_BY_HOE})
+			.build("slab.scales", "slab_scales", blockID++,
+				b -> new BlockLogicFunnySlabPaintable(b, BLOCK_SCALES, () -> SLAB_SCALES_PAINTED))
+			.withDisabledNeighborNotifyOnMetadataChange();
+
+		SLAB_SCALES_PAINTED = new BlockBuilder(MOD_ID)
+			.setBlockSound(FunnyBlockSounds.SCALES).setUseInternalLight()
+			.addTags(new Tag[]{BlockTags.MINEABLE_BY_PICKAXE, BlockTags.MINEABLE_BY_AXE, BlockTags.MINEABLE_BY_HOE})
+			.build("slab.scales.painted", "slab_scales_painted", blockID++,
+				b -> new BlockLogicFunnySlabPainted(b, BLOCK_SCALES_PAINTED, () -> SLAB_SCALES))
+			.withDisabledNeighborNotifyOnMetadataChange()
+			.setBlockItem(ItemBlockSlabPainted::new);
+
+		STAIRS_SCALES = new BlockBuilder(MOD_ID)
+			.setBlockSound(FunnyBlockSounds.SCALES).setUseInternalLight()
+			.addTags(new Tag[]{BlockTags.MINEABLE_BY_PICKAXE, BlockTags.MINEABLE_BY_AXE, BlockTags.MINEABLE_BY_HOE})
+			.build("stairs.scales", "stairs_scales", blockID++,
+				b -> new BlockLogicFunnyStairsPaintable(b, BLOCK_SCALES, () -> STAIRS_SCALES_PAINTED))
+			.withDisabledNeighborNotifyOnMetadataChange();
+
+		STAIRS_SCALES_PAINTED = new BlockBuilder(MOD_ID)
+			.setBlockSound(FunnyBlockSounds.SCALES).setUseInternalLight()
+			.addTags(new Tag[]{BlockTags.MINEABLE_BY_PICKAXE, BlockTags.MINEABLE_BY_AXE, BlockTags.MINEABLE_BY_HOE})
+			.build("stairs.scales.painted", "stairs_scales_painted", blockID++,
+				b -> new BlockLogicFunnyStairsPainted(b, BLOCK_SCALES_PAINTED, () -> STAIRS_SCALES))
+			.withDisabledNeighborNotifyOnMetadataChange()
+			.setBlockItem(ItemBlockStairsPainted::new);
+
+// Stairs follow the same pattern — swap BlockLogicSlab* for BlockLogicStairs*
 	}
 
 	@Override
